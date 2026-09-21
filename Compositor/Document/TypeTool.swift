@@ -124,14 +124,14 @@ extension EditorSession {
                     transform.origin.y += anchor.y - moved.y
                 }
                 guard transform.isValid else { throw ProjectError.tooLarge }
-                beginEdit("Edit Text")
+                beginEdit("编辑文本")
                 if layer.mask?.placement == nil { document?.layers[index].mask?.placement = layer.maskTransform }
                 document?.layers[index].asset = ImportedImage(image: image, thumbnail: thumbnail, name: asset.name)
                 document?.layers[index].text = text
                 document?.layers[index].transform = transform
                 endEdit()
             } else {
-                addPixelLayer(image, at: draft.origin, name: Self.layerName(for: draft.style.content), editName: "New Text Layer",
+                addPixelLayer(image, at: draft.origin, name: Self.layerName(for: draft.style.content), editName: "新建文本图层",
                               dropsSelection: false, text: text)
             }
             succeeded = true
@@ -157,7 +157,7 @@ extension EditorSession {
         guard canEditLayers, textDraft == nil, rect.width.isFinite, rect.height.isFinite else { return }
         var style = textDefaults
         style.boxSize = CGSize(width: max(16, rect.width.rounded()), height: max(16, rect.height.rounded()))
-        guard style.boxIsValid else { brushError = "That text box exceeds the 30,000-pixel or 100-megapixel limit."; return }
+        guard style.boxIsValid else { brushError = "该文本框超出 30,000 像素或 1 亿像素限制。"; return }
         beginText(at: rect.origin, newLayer: true)
         textDraft?.style.boxSize = style.boxSize
     }
@@ -173,7 +173,7 @@ extension EditorSession {
         style.red = color.red; style.green = color.green; style.blue = color.blue
         guard style.isValid, let image = try? Self.textImage(style), let thumbnail = try? PixelInvert.thumbnail(of: image) else { return false }
         finishOpacityEdit()
-        beginEdit("Fill Text")
+        beginEdit("填充文本")
         document?.layers[index].asset = ImportedImage(image: image, thumbnail: thumbnail, name: asset.name)
         document?.layers[index].text = LayerText(style: style, image: image)
         endEdit()

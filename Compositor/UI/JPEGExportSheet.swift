@@ -41,7 +41,7 @@ struct JPEGExportSheet: View {
                 Text("\(Int((options.quality * 100).rounded()))%")
                     .monospacedDigit().frame(width: 45, alignment: .trailing)
             }
-            ColorPicker("Background for transparency", selection: $matte, supportsOpacity: false)
+            ColorPicker("透明区域背景色", selection: $matte, supportsOpacity: false)
                 .onChange(of: matte) { _, color in
                     guard let rgb = NSColor(color).usingColorSpace(.sRGB) else { return }
                     options.red = rgb.redComponent
@@ -54,11 +54,11 @@ struct JPEGExportSheet: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 else if readyOptions == options, let result {
                     Text(ByteCountFormatter.string(fromByteCount: Int64(result.data.count), countStyle: .file))
-                    Text("· encoded preview, fitted to window").foregroundStyle(.secondary)
-                } else { Text("Updating preview…").foregroundStyle(.secondary) }
+                    Text("· 编码预览，适合窗口").foregroundStyle(.secondary)
+                } else { Text("正在更新预览…").foregroundStyle(.secondary) }
                 Spacer()
                 Button("取消") { finish(nil) }.configuredNativeShortcut(.escape)
-                Button("Export…") {
+                Button("导出…") {
                     UserDefaults.standard.set(options.quality, forKey: Self.qualityKey)
                     finish(result?.data)
                 }

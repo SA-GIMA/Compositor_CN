@@ -26,7 +26,7 @@ nonisolated enum MagicWand {
         var errorDescription: String? {
             switch self {
             case .tooDetailed: "该选区过于复杂，难以生成轮廓。请尝试其他容差，或打开「连续」。"
-            case .memory: "There isn’t enough memory to make that selection."
+            case .memory: "内存不足，无法创建该选区。"
             }
         }
     }

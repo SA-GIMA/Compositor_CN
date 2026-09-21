@@ -7,7 +7,7 @@ struct LassoControls: View {
         HStack(spacing: 12) {
             Text(session.tool == .marquee ? "选框" : session.tool == .wand ? "魔棒" : "套索").font(ToolHeaderStyle.titleFont)
             if session.tool == .marquee {
-                Picker("Shape", selection: Binding(get: { session.marqueeKind }, set: { kind in
+                Picker("形状", selection: Binding(get: { session.marqueeKind }, set: { kind in
                     session.cancelLasso()
                     session.marqueeKind = kind
                 })) {
@@ -17,7 +17,7 @@ struct LassoControls: View {
                 .help("按 M 在矩形与椭圆之间切换")
             }
             if session.tool == .wand {
-                Picker("Mode", selection: Binding(get: { session.wandMode }, set: { mode in
+                Picker("模式", selection: Binding(get: { session.wandMode }, set: { mode in
                     session.cancelLasso()
                     session.wandMode = mode
                 })) {
@@ -27,7 +27,7 @@ struct LassoControls: View {
                 .help("按 Tab 在魔棒与对象之间切换")
             }
             if session.tool == .lasso {
-                Picker("Lasso", selection: Binding(get: { session.lassoKind }, set: { kind in
+                Picker("套索", selection: Binding(get: { session.lassoKind }, set: { kind in
                     session.cancelLasso()
                     session.lassoKind = kind
                 })) {
@@ -37,7 +37,7 @@ struct LassoControls: View {
                 .help("按 L 在套索与多边形套索之间切换")
             }
             // Shows held Shift/Option (or an outline's mode) live; clicking sets the choice.
-            Picker("Mode", selection: Binding(get: { session.displayedSelectionMode },
+            Picker("模式", selection: Binding(get: { session.displayedSelectionMode },
                                               set: { session.selectionModeChoice = $0 })) {
                 ForEach(SelectionMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
             }
@@ -62,7 +62,7 @@ struct LassoControls: View {
                 Button("羽化") { session.featherSelection(by: session.selectionFeatherAmount) }
                     .disabled(!session.canModifySelection)
                     .help("按该像素数羽化选区边缘")
-                TextField("Feather", value: Binding(get: { Double(session.selectionFeatherAmount) },
+                TextField("羽化", value: Binding(get: { Double(session.selectionFeatherAmount) },
                                                     set: { session.selectionFeatherAmount = $0.isFinite ? Int(min(250, max(1, $0))) : 2 }),
                           format: .number.precision(.fractionLength(0)))
                     .frame(width: 48).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing)
@@ -94,12 +94,12 @@ struct LassoControls: View {
                                 change: { session.wandSettings.tolerance = Int(min(255, max(0, $0.rounded()))) })
             }
             .help("各颜色通道相对点击色可容许的差值（0–255）")
-            Picker("Sample Size", selection: $session.wandSettings.sampleSize) {
+            Picker("取样大小", selection: $session.wandSettings.sampleSize) {
                 ForEach(WandSampleSize.allCases, id: \.self) { Text($0.title).tag($0) }
             }
             .labelsHidden().fixedSize()
             .help("匹配点击像素，或周围像素的平均值")
-            Picker("Sample", selection: $session.wandSettings.sampleAllLayers) {
+            Picker("取样", selection: $session.wandSettings.sampleAllLayers) {
                 Text("当前图层").tag(false)
                 Text("所有图层").tag(true)
             }
@@ -112,7 +112,7 @@ struct LassoControls: View {
 
     private var objectSelectionControls: some View {
         HStack(spacing: 12) {
-            Picker("Sample", selection: $session.objectSelectionSettings.sampleAllLayers) {
+            Picker("取样", selection: $session.objectSelectionSettings.sampleAllLayers) {
                 Text("当前图层").tag(false)
                 Text("所有图层").tag(true)
             }
@@ -206,16 +206,16 @@ struct SelectionAmountSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
-                Text("Amount").frame(minWidth: 60, alignment: .leading)
+                Text("数量").frame(minWidth: 60, alignment: .leading)
                 Slider(value: Binding(get: { Double(amount ?? 1) },
                                       set: { input = String(Int($0.rounded())) }),
                        in: 1...Double(maximum), step: 1)
-                TextField("Amount", text: $input)
+                TextField("数量", text: $input)
                     .frame(width: 56).textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing).focused($focused)
                     .unitSuffix("px")
             }
-            Text("Enter a whole number from 1 to \(maximum) px.")
+            Text("请输入 1 到 \(maximum) 的整数像素。")
                 .font(.callout).foregroundStyle(.secondary)
                 .opacity(amount == nil ? 1 : 0)
             Divider()

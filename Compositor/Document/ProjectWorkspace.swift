@@ -169,7 +169,7 @@ final class ProjectWorkspace {
         var copied = sourceDocument.layers.filter { included.contains($0.id) }
         let used = target.session.document?.layers.reduce(0) { $0 + ($1.asset.map { $0.image.width * $0.image.height } ?? 0) } ?? 0
         let added = copied.reduce(0) { $0 + ($1.asset.map { $0.image.width * $0.image.height } ?? 0) }
-        guard used + added <= 100_000_000 else { target.session.importError = "The copied layers exceed this project’s 100-megapixel limit."; return }
+        guard used + added <= 100_000_000 else { target.session.importError = "拷贝的图层超出了本项目 1 亿像素的限制。"; return }
         isManaging = true
         sourceTab.session.isProjectBusy = true
         target.session.isProjectBusy = true

@@ -25,16 +25,16 @@ struct ColorPickerSheet: View {
                 HStack(alignment: .top, spacing: 16) {
                     preview
                     VStack(spacing: 8) {
-                        Button { finish(true) } label: { Text("OK").frame(maxWidth: .infinity) }
+                        Button { finish(true) } label: { Text("好").frame(maxWidth: .infinity) }
                             .configuredNativeShortcut(.return)
-                        Button { finish(false) } label: { Text("Cancel").frame(maxWidth: .infinity) }
+                        Button { finish(false) } label: { Text("取消").frame(maxWidth: .infinity) }
                             .configuredNativeShortcut(.escape)
                     }
                     .controlSize(.large).frame(width: 90)
                 }
                 Spacer(minLength: 12)
                 fields
-                Text("Click the canvas to sample")
+                Text("点击画布取样")
                     .font(.caption).foregroundStyle(.secondary).padding(.top, 8)
             }
             .frame(width: 180, height: fieldSize, alignment: .topLeading)
@@ -65,7 +65,7 @@ struct ColorPickerSheet: View {
             hsb.saturation = min(1, max(0, value.location.x / fieldSize))
             hsb.brightness = 1 - min(1, max(0, value.location.y / fieldSize))
         })
-        .accessibilityLabel("Saturation and brightness")
+        .accessibilityLabel("饱和度与明度")
     }
 
     private var hueStrip: some View {
@@ -89,7 +89,7 @@ struct ColorPickerSheet: View {
         .gesture(DragGesture(minimumDistance: 0).onChanged { value in
             hsb.hue = (1 - min(1, max(0, value.location.y / fieldSize))) * 360
         })
-        .accessibilityLabel("Hue")
+        .accessibilityLabel("色相")
         .accessibilityValue("\(Int(hsb.hue.rounded())) degrees")
     }
 
@@ -98,7 +98,7 @@ struct ColorPickerSheet: View {
             .fill(color.swiftUI)
             .overlay { RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(.black.opacity(0.6), lineWidth: 1) }
             .frame(width: 64, height: 64)
-            .accessibilityLabel("New color")
+            .accessibilityLabel("新颜色")
     }
 
     private var fields: some View {
@@ -108,12 +108,12 @@ struct ColorPickerSheet: View {
             channelRow("B", \.blue)
             GridRow {
                 Text("#").frame(width: 14, alignment: .leading)
-                TextField("Hex", text: $hexDraft)
+                TextField("十六进制", text: $hexDraft)
                     .font(.system(.body, design: .monospaced))
                     .frame(width: 84)
                     .focused($hexFocused)
                     .onSubmit(commitHex)
-                    .accessibilityLabel("Hex color")
+                    .accessibilityLabel("十六进制颜色")
             }
         }
     }
@@ -135,7 +135,7 @@ struct ColorPickerSheet: View {
                                 rgb[keyPath: channel] = CGFloat(min(255, max(0, newValue.rounded()))) / 255
                                 hsb.setRGB(rgb)
                             })
-                .accessibilityLabel(label == "R" ? "Red" : label == "G" ? "Green" : "Blue")
+                .accessibilityLabel(label == "R" ? "红色" : label == "G" ? "绿色" : "蓝色")
         }
     }
 

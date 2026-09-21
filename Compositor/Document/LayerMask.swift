@@ -264,7 +264,7 @@ extension EditorSession {
         guard canEditMask, activeLayer?.mask == nil, let mask = LayerMask.solid(revealing: revealing),
               let index = document?.layers.firstIndex(where: { $0.id == activeLayerID }) else { return }
         finishOpacityEdit()
-        beginEdit(revealing ? "Add Reveal-All Mask" : "Add Hide-All Mask")
+        beginEdit(revealing ? "添加显示全部蒙版" : "添加隐藏全部蒙版")
         document?.layers[index].mask = mask
         isMaskSelected = true
         endEdit()
@@ -273,7 +273,7 @@ extension EditorSession {
         guard canEditMask, activeLayer?.mask != nil,
               let index = document?.layers.firstIndex(where: { $0.id == activeLayerID }) else { return }
         finishOpacityEdit()
-        beginEdit(activeLayer?.mask?.isEnabled == true ? "Disable Layer Mask" : "Enable Layer Mask")
+        beginEdit(activeLayer?.mask?.isEnabled == true ? "停用图层蒙版" : "启用图层蒙版")
         document?.layers[index].mask?.isEnabled.toggle()
         endEdit()
     }
@@ -302,7 +302,7 @@ extension EditorSession {
         commitTransform()
         finishOpacityEdit()
         mask.placement = from.maskTransform
-        beginEdit(layers[index].mask == nil ? "Copy Layer Mask" : "Replace Layer Mask")
+        beginEdit(layers[index].mask == nil ? "拷贝图层蒙版" : "替换图层蒙版")
         document?.layers[index].mask = mask
         selectLayer(target)
         isMaskSelected = true
@@ -314,7 +314,7 @@ extension EditorSession {
               let mask = document?.layers[index].mask else { return }
         commitTransform()
         finishOpacityEdit()
-        beginEdit(mask.isLinked ? "Unlink Layer Mask" : "Link Layer Mask")
+        beginEdit(mask.isLinked ? "取消链接图层蒙版" : "链接图层蒙版")
         document?.layers[index].mask?.isLinked.toggle()
         endEdit()
     }
@@ -349,7 +349,7 @@ extension EditorSession {
                                                      background: LayerMask.background(of: mask.asset.thumbnail))
                 let asset = moved.image === mask.asset.image ? mask.asset : try LayerMask.asset(from: moved.image)
                 finishOpacityEdit()
-                beginEdit("Distort Layer Mask")
+                beginEdit("扭曲图层蒙版")
                 document?.layers[index].mask = LayerMask(asset: asset, isEnabled: mask.isEnabled,
                     placement: moved.transform.samePlacement(as: layer.transform) ? nil : moved.transform, isLinked: mask.isLinked)
                 endEdit()

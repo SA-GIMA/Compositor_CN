@@ -259,8 +259,8 @@ extension EditorSession {
             return
         }
         applySelection(outline, mode: draft.mode,
-                       name: draft.kind == .freehand ? "Lasso" : draft.kind == .polygonal ? "Polygonal Lasso"
-                           : draft.kind == .ellipse ? "Elliptical Marquee" : "Rectangular Marquee")
+                       name: draft.kind == .freehand ? "套索" : draft.kind == .polygonal ? "多边形套索"
+                           : draft.kind == .ellipse ? "椭圆选框" : "矩形选框")
     }
 
     func applySelection(_ shape: CGPath, mode: SelectionMode, name: String) {
@@ -328,7 +328,19 @@ extension EditorSession {
     enum SelectionAmountOperation: String {
         case expand = "Expand", contract = "Contract", feather = "Feather"
     }
+}
 
+extension EditorSession.SelectionAmountOperation {
+    nonisolated var displayName: String {
+        switch self {
+        case .expand: "扩展选区"
+        case .contract: "收缩选区"
+        case .feather: "羽化选区"
+        }
+    }
+}
+
+extension EditorSession {
     /// Menu commands ask for an amount; the tool header applies its input directly.
     func promptSelectionAmount(_ operation: SelectionAmountOperation) {
         guard canModifySelection else { return }
@@ -360,7 +372,7 @@ extension EditorSession {
         // Two soft edges together spread a little less than their sum, as blurs do.
         let softened = (current.feather * current.feather + CGFloat(amount) * CGFloat(amount)).squareRoot()
         setSelection(DocumentSelection(path: current.path, antialiased: current.antialiased,
-                                       feather: min(250, softened)), name: "Feather Selection")
+                                       feather: min(250, softened)), name: "羽化选区")
     }
 
     private func resizeSelection(by delta: CGFloat, name: String) {
@@ -381,13 +393,13 @@ extension EditorSession {
 
     func deselect() {
         guard selection != nil else { return }
-        setSelection(nil, name: "Deselect")
+        setSelection(nil, name: "取消选择")
     }
 
     func invertSelection() {
         guard let document, let current = selection else { return }
         let canvas = CGPath(rect: CGRect(origin: .zero, size: document.size), transform: nil)
         setSelection(DocumentSelection(path: canvas.subtracting(current.path, using: .winding), antialiased: current.antialiased, feather: current.feather),
-                     name: "Inverse")
+                     name: "反选")
     }
 }

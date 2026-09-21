@@ -15,12 +15,12 @@ struct TypeControls: View {
     }
     var body: some View {
         HStack(spacing: 12) {
-            Text("Type").font(ToolHeaderStyle.titleFont)
+            Text("文字").font(ToolHeaderStyle.titleFont)
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     TypeFontPicker(fontName: value(\.fontName))
-                        .frame(width: 210).help("Font face, including bold and italic variants")
-                    TextField("Size", value: number(\.fontSize), format: .number).frame(width: 52).unitSuffix("px")
+                        .frame(width: 210).help("字体，包括粗体与斜体变体")
+                    TextField("字号", value: number(\.fontSize), format: .number).frame(width: 52).unitSuffix("px")
                         .arrowSteps(value: { Double(session.currentTextStyle.fontSize) },
                                     change: { stepped in session.changeTextStyle { $0.fontSize = CGFloat(min(2000, max(1, stepped))) } })
                     Button { session.openTextColorPicker() } label: {
@@ -30,7 +30,7 @@ struct TypeControls: View {
                             .overlay { swatch.strokeBorder(.black.opacity(0.5), lineWidth: 1) }
                             .frame(width: 36, height: 18)
                     }
-                    .buttonStyle(.plain).help("Text color").accessibilityLabel("Text color")
+                    .buttonStyle(.plain).help("文本颜色").accessibilityLabel("文本颜色")
                     HStack(spacing: 2) {
                         ForEach(TextAlignment.allCases, id: \.self) { alignment in
                             let selected = session.currentTextStyle.alignment == alignment
@@ -45,35 +45,35 @@ struct TypeControls: View {
                                     .contentShape(RoundedRectangle(cornerRadius: 4))
                             }
                             .buttonStyle(.plain)
-                            .help("Align " + alignment.rawValue.lowercased())
-                            .accessibilityLabel("Align " + alignment.rawValue.lowercased())
+                            .help("对齐" + alignment.rawValue.lowercased())
+                            .accessibilityLabel("对齐" + alignment.rawValue.lowercased())
                             .accessibilityAddTraits(selected ? .isSelected : [])
                         }
                     }
-                    Text("Tracking")
-                    TextField("Tracking", value: number(\.tracking), format: .number).frame(width: 45)
+                    Text("字距")
+                    TextField("字距", value: number(\.tracking), format: .number).frame(width: 45)
                         .arrowSteps(value: { Double(session.currentTextStyle.tracking) },
                                     change: { stepped in session.changeTextStyle { $0.tracking = CGFloat(stepped) } })
-                    Text("Leading")
+                    Text("行距")
                     // 0 means Auto: the field is left empty so its "Auto" placeholder shows through.
-                    TextField("Leading", text: Binding(get: {
+                    TextField("行距", text: Binding(get: {
                         let leading = session.currentTextStyle.leading
                         return leading > 0 ? String(Int(leading.rounded())) : ""
                     }, set: { typed in
                         let value = Double(typed.trimmingCharacters(in: .whitespaces)) ?? 0
                         session.changeTextStyle { $0.leading = CGFloat(max(0, min(5000, value))) }
-                    }), prompt: Text("Auto"))
+                    }), prompt: Text("自动"))
                         .frame(width: 52)
                         .arrowSteps(value: { Double(session.currentTextStyle.lineHeight) },
                                     change: { stepped in session.changeTextStyle { $0.leading = CGFloat(max(0, stepped)) } })
-                        .help("Line height, baseline to baseline. Empty or 0 is Auto: 120% of the font size.")
+                        .help("行高（基线到基线）。留空或 0 表示自动：字号的 120%。")
                 }
             }.scrollIndicators(.hidden)
             if session.textDraft != nil {
                 Button("取消") { session.cancelText() }
-                Button("Done") { _ = session.finishText() }
+                Button("完成") { _ = session.finishText() }
             } else {
-                Button("Edit Text") { session.editActiveText() }.disabled(session.activeLayer?.liveText == nil)
+                Button("编辑文本") { session.editActiveText() }.disabled(session.activeLayer?.liveText == nil)
             }
         }
         .textFieldStyle(.roundedBorder).padding(.horizontal, 18).toolHeaderBar()
@@ -97,7 +97,7 @@ private struct TypeFontPicker: NSViewRepresentable {
         button.cell?.lineBreakMode = .byTruncatingTail
         button.cell?.usesSingleLineMode = true
         button.cell?.alignment = .left
-        button.setAccessibilityLabel("Font")
+        button.setAccessibilityLabel("字体")
         button.target = context.coordinator
         button.action = #selector(Coordinator.choose(_:))
         button.menu?.delegate = context.coordinator

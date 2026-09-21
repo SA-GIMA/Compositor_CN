@@ -2,7 +2,7 @@ import AppKit
 
 /// Cmd-T with a selection: the selected pixels float on a temporary layer, edited with the
 /// normal transform handles, then merge back into their layer. The whole thing is one
-/// "Transform Selection" undo step; Escape restores the document exactly.
+/// "变换选区" undo step; Escape restores the document exactly.
 struct FloatingTransform {
     let sourceID: UUID
     let before: CanvasDocument
@@ -33,7 +33,7 @@ extension EditorSession {
         } catch { brushError = error.localizedDescription; return }
         let before = document, beforeActive = activeLayerID
         // Outer edit: closed by commitTransform (merge) or cancelTransform (restore).
-        beginEdit("Transform Selection")
+        beginEdit("变换选区")
         await clearSelectedPixels()
         guard let index = self.document?.layers.firstIndex(where: { $0.id == source.id }),
               let thumbnail = try? PixelInvert.thumbnail(of: lifted.image) else {
@@ -41,9 +41,9 @@ extension EditorSession {
             endEdit()
             return
         }
-        var floating = ImageLayer(asset: ImportedImage(image: lifted.image, thumbnail: thumbnail, name: "Floating Selection"),
+        var floating = ImageLayer(asset: ImportedImage(image: lifted.image, thumbnail: thumbnail, name: "浮动选区"),
                                   origin: lifted.region.origin)
-        floating.name = "Floating Selection"
+        floating.name = "浮动选区"
         floating.parentID = source.parentID
         floating.opacity = source.opacity
         floating.blendMode = source.blendMode

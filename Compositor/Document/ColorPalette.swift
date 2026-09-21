@@ -167,7 +167,7 @@ enum ColorPickerTarget: Equatable {
     case text(draftID: UUID?)
     var title: String {
         switch self {
-        case .text: return "Color Picker (Text Color)"
+        case .text: return "拾色器（文本颜色）"
         case .effect(let kind): return "Color Picker (\(kind.rawValue) Color)"
         case .palette(let background): return background ? "拾色器（背景色）" : "拾色器（前景色）"
         case .gradientMap(let highlights): return highlights ? "拾色器（渐变映射高光）" : "拾色器（渐变映射阴影）"

@@ -81,7 +81,7 @@ struct CompositorApp: App {
                 // Grouped: a commands builder takes at most ten items.
                 Group {
                     CommandGroup(after: .appInfo) {
-                        Button("Check for Updates…") { applicationDelegate.updater.checkForUpdates(nil) }
+                        Button("检查更新…") { applicationDelegate.updater.checkForUpdates(nil) }
                     }
                     CommandGroup(after: .toolbar) {
                         Button("适合画布") { session.fit() }.configuredKeyboardShortcut("0").disabled(session.document == nil)
@@ -90,51 +90,51 @@ struct CompositorApp: App {
                             .configuredKeyboardShortcut("=").disabled(session.document == nil)
                         Button("缩小") { session.zoom(to: session.viewport.zoom / 1.25) }
                             .configuredKeyboardShortcut("-").disabled(session.document == nil)
-                        Toggle("Pixel Grid (800% and above)", isOn: Binding(get: { session.showsPixelGrid },
+                        Toggle("像素网格（800% 及以上）", isOn: Binding(get: { session.showsPixelGrid },
                                                                               set: { session.showsPixelGrid = $0 }))
-                        Toggle("Snap", isOn: Binding(get: { session.snappingEnabled },
+                        Toggle("对齐", isOn: Binding(get: { session.snappingEnabled },
                                                      set: { session.snappingEnabled = $0 }))
-                        Toggle("Show Transform Controls", isOn: Binding(get: { session.showsTransformControls },
+                        Toggle("显示变换控件", isOn: Binding(get: { session.showsTransformControls },
                                                                           set: { session.showsTransformControls = $0 }))
                             .configuredKeyboardShortcut("h").disabled(session.tool != .move || session.document == nil)
                         Group {
                             Divider()
-                            Menu("Show") {
-                                Toggle("Grid", isOn: Binding(get: { session.showsGrid }, set: { session.showsGrid = $0 }))
+                            Menu("显示") {
+                                Toggle("网格", isOn: Binding(get: { session.showsGrid }, set: { session.showsGrid = $0 }))
                                     .configuredKeyboardShortcut("'").disabled(session.document == nil)
-                                Toggle("Guides", isOn: Binding(get: { session.showsGuides }, set: { session.showsGuides = $0 }))
+                                Toggle("参考线", isOn: Binding(get: { session.showsGuides }, set: { session.showsGuides = $0 }))
                                     .configuredKeyboardShortcut(";").disabled(session.document == nil)
                             }
-                            Toggle("Rulers", isOn: Binding(get: { session.showsRulers }, set: { session.showsRulers = $0 }))
+                            Toggle("标尺", isOn: Binding(get: { session.showsRulers }, set: { session.showsRulers = $0 }))
                                 .configuredKeyboardShortcut("r").disabled(session.document == nil)
                             Divider()
-                            Toggle("Snap", isOn: Binding(get: { session.snapEnabled }, set: { session.snapEnabled = $0 }))
+                            Toggle("对齐", isOn: Binding(get: { session.snapEnabled }, set: { session.snapEnabled = $0 }))
                                 .configuredKeyboardShortcut(";", modifiers: [.command, .shift]).disabled(session.document == nil)
-                            Menu("Snap To") {
-                                Toggle("Guides", isOn: Binding(get: { session.snapToGuides }, set: { session.snapToGuides = $0 }))
+                            Menu("对齐到") {
+                                Toggle("参考线", isOn: Binding(get: { session.snapToGuides }, set: { session.snapToGuides = $0 }))
                                     .disabled(session.document == nil)
-                                Toggle("Grid", isOn: Binding(get: { session.snapToGrid }, set: { session.snapToGrid = $0 }))
+                                Toggle("网格", isOn: Binding(get: { session.snapToGrid }, set: { session.snapToGrid = $0 }))
                                     .disabled(session.document == nil)
-                                Toggle("Layers", isOn: Binding(get: { session.snapToLayers }, set: { session.snapToLayers = $0 }))
+                                Toggle("图层", isOn: Binding(get: { session.snapToLayers }, set: { session.snapToLayers = $0 }))
                                     .disabled(session.document == nil)
-                                Toggle("Document Bounds", isOn: Binding(get: { session.snapToDocumentBounds },
+                                Toggle("文档边界", isOn: Binding(get: { session.snapToDocumentBounds },
                                                                         set: { session.snapToDocumentBounds = $0 }))
                                     .disabled(session.document == nil)
                             }
                             Divider()
-                            Toggle("Lock Guides", isOn: Binding(get: { session.locksGuides }, set: { session.locksGuides = $0 }))
+                            Toggle("锁定参考线", isOn: Binding(get: { session.locksGuides }, set: { session.locksGuides = $0 }))
                                 .configuredKeyboardShortcut(";", modifiers: [.command, .option]).disabled(session.document == nil)
-                            Button("Clear Guides") { session.clearGuides() }
+                            Button("清除参考线") { session.clearGuides() }
                                 .disabled(!session.canClearGuides)
                         }
                     }
                     // ⌘H toggles the Move tool's transform controls instead of hiding the app, so Hide keeps its
                     // place in the app menu without the shortcut.
                     CommandGroup(replacing: .appVisibility) {
-                        Button("Hide Compositor") { NSApp.hide(nil) }
-                        Button("Hide Others") { NSApp.hideOtherApplications(nil) }
+                        Button("隐藏 Compositor") { NSApp.hide(nil) }
+                        Button("隐藏其他") { NSApp.hideOtherApplications(nil) }
                             .configuredKeyboardShortcut("h", modifiers: [.command, .option])
-                        Button("Show All") { NSApp.unhideAllApplications(nil) }
+                        Button("全部显示") { NSApp.unhideAllApplications(nil) }
                     }
                 }
                 CommandGroup(replacing: .pasteboard) {
@@ -142,21 +142,21 @@ struct CompositorApp: App {
                     // Cut, Copy and Paste check when chosen rather than through .disabled: what they depend on
                     // (the pasteboard, the copied pixels, the busy flag) isn't observed, so a disabled state could
                     // go stale — the first Paste after a Copy used to beep until something else refreshed the menu.
-                    Button("Cut") {
+                    Button("剪切") {
                         if NSApp.keyWindow?.firstResponder is NSTextView { NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil) }
                         else if session.selection != nil, session.canCopyPixels { Task { await session.cutSelection() } }
                         else { NSSound.beep() }
                     }
                         .configuredKeyboardShortcut("x")
-                    Button("Copy") {
+                    Button("拷贝") {
                         if NSApp.keyWindow?.firstResponder is NSTextView { NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil) }
                         else if session.canCopyPixels { session.copySelection() }
                         else { NSSound.beep() }
                     }
                         .configuredKeyboardShortcut("c")
-                    Button("Copy Merged") { session.copyMergedSelection() }
+                    Button("合并拷贝") { session.copyMergedSelection() }
                         .configuredKeyboardShortcut("c", modifiers: [.command, .shift]).disabled(!session.canCopyMerged)
-                    Button("Paste") {
+                    Button("粘贴") {
                         if NSApp.keyWindow?.firstResponder is NSTextView { NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil) }
                         else if session.canPaste { session.paste() }
                         else { NSSound.beep() }
@@ -165,83 +165,83 @@ struct CompositorApp: App {
                 }
                 CommandGroup(after: .pasteboard) {
                     Divider()
-                    Button("Keyboard Shortcuts…") { ShortcutSettings.shared.show() }
+                    Button("键盘快捷键…") { ShortcutSettings.shared.show() }
                     // Photoshop's fill shortcuts; in a text field they keep their text meaning.
-                    Button("Fill with Foreground Color") {
+                    Button("填充前景色") {
                         if NSApp.keyWindow?.firstResponder is NSTextView {
                             NSApp.sendAction(#selector(NSResponder.deleteWordBackward(_:)), to: nil, from: nil)
                         } else { Task { await session.fillSelection(with: .foreground) } }
                     }
                         .configuredKeyboardShortcut(.delete, modifiers: .option).disabled(!session.canEditPixels)
-                    Button("Fill with Background Color") {
+                    Button("填充背景色") {
                         if NSApp.keyWindow?.firstResponder is NSTextView {
                             NSApp.sendAction(#selector(NSResponder.deleteToBeginningOfLine(_:)), to: nil, from: nil)
                         } else { Task { await session.fillSelection(with: .background) } }
                     }
                         .configuredKeyboardShortcut(.delete, modifiers: .command).disabled(!session.canEditPixels)
-                    Button("Clear Selection Pixels") { Task { await session.clearSelectedPixels() } }
+                    Button("清除选区像素") { Task { await session.clearSelectedPixels() } }
                         .disabled(session.selection == nil || !session.canEditPixels)
-                    Button("Content-Aware Fill…") { session.beginFilter(.contentAwareFill) }
+                    Button("内容识别填充…") { session.beginFilter(.contentAwareFill) }
                         .configuredKeyboardShortcut(.delete, modifiers: .shift).disabled(!session.canContentAwareFill)
                 }
                 CommandMenu("选择") {
                     // Text fields keep their own Select All.
-                    Button("All") {
+                    Button("全部") {
                         if NSApp.keyWindow?.firstResponder is NSTextView {
                             NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
                         } else { session.selectAll() }
                     }
                         .configuredKeyboardShortcut("a").disabled(session.document == nil)
-                    Button("Deselect") { session.deselect() }
+                    Button("取消选择") { session.deselect() }
                         .configuredKeyboardShortcut("d").disabled(session.selection == nil || !session.canEditSelection)
-                    Button("Inverse") { session.invertSelection() }
+                    Button("反选") { session.invertSelection() }
                         .configuredKeyboardShortcut("i", modifiers: [.command, .shift])
                         .disabled(session.selection == nil || !session.canEditSelection)
-                    Button("Layer's Pixels") {
+                    Button("图层像素") {
                         if let id = session.activeLayerID { session.loadLayerSelection(layerID: id) }
                     }
                         .disabled(session.activeLayer?.asset == nil || !session.canEditSelection)
-                    Button("Subject") { Task { await session.selectSubject() } }
+                    Button("主体") { Task { await session.selectSubject() } }
                         .configuredKeyboardShortcut("a", modifiers: [.command, .option])
                         .disabled(!session.canSelectSubject)
-                    Button("Mask's Black Areas") {
+                    Button("蒙版黑色区域") {
                         if let id = session.activeLayerID { session.loadMaskSelection(layerID: id) }
                     }
                         .disabled(session.activeLayer?.mask == nil || !session.canEditSelection)
                     Divider()
-                    Button("Expand…") { session.promptSelectionAmount(.expand) }
+                    Button("扩展…") { session.promptSelectionAmount(.expand) }
                         .disabled(!session.canModifySelection)
-                    Button("Contract…") { session.promptSelectionAmount(.contract) }
+                    Button("收缩…") { session.promptSelectionAmount(.contract) }
                         .disabled(!session.canModifySelection)
-                    Button("Feather…") { session.promptSelectionAmount(.feather) }
+                    Button("羽化…") { session.promptSelectionAmount(.feather) }
                         .disabled(!session.canModifySelection)
                 }
                 CommandMenu("图像") {
-                    Button("Curves…") { session.beginFilter(.curves) }
+                    Button("曲线…") { session.beginFilter(.curves) }
                         .configuredKeyboardShortcut("m").disabled(!session.canAdjustColors || session.hueSaturation != nil)
-                    Button("Levels…") { session.beginLevels() }
+                    Button("色阶…") { session.beginLevels() }
                         .configuredKeyboardShortcut("l").disabled(!session.canAdjustColors || session.hueSaturation != nil)
-                    Button("Hue/Saturation…") { session.beginHueSaturation() }
+                    Button("色相/饱和度…") { session.beginHueSaturation() }
                         .configuredKeyboardShortcut("u").disabled(!session.canAdjustColors)
                     ForEach([FilterKind.exposure, .gradientMap, .grain], id: \.self) { kind in
                         Button("\(kind.displayName)…") { session.beginFilter(kind) }
                             .disabled(!session.canAdjustColors || session.hueSaturation != nil)
                     }
-                    Button(session.isMaskSelected ? "Invert Mask" : "Invert") { Task { await session.invertPixels() } }
+                    Button(session.isMaskSelected ? "反相蒙版" : "Invert") { Task { await session.invertPixels() } }
                         .configuredKeyboardShortcut("i")
                         .disabled(!session.canInvert)
                     Divider()
-                    Button("Canvas Size…") { Task { await applicationDelegate.projects.canvasSize() } }
+                    Button("画布大小…") { Task { await applicationDelegate.projects.canvasSize() } }
                         .configuredKeyboardShortcut("c", modifiers: [.command, .option])
                         .disabled(session.document == nil || !applicationDelegate.projects.canStart)
-                    Button("Image Size…") { Task { await applicationDelegate.projects.imageSize() } }
+                    Button("图像大小…") { Task { await applicationDelegate.projects.imageSize() } }
                         .configuredKeyboardShortcut("i", modifiers: [.command, .option])
                         .disabled(session.document == nil || !applicationDelegate.projects.canStart)
                     Group {
                         Divider()
-                        Button("Flip Canvas Horizontal") { session.flipCanvas(horizontally: true) }
+                        Button("水平翻转画布") { session.flipCanvas(horizontally: true) }
                             .disabled(!session.canEditLayers)
-                        Button("Flip Canvas Vertical") { session.flipCanvas(horizontally: false) }
+                        Button("垂直翻转画布") { session.flipCanvas(horizontally: false) }
                             .disabled(!session.canEditLayers)
                     }
                 }
@@ -252,53 +252,53 @@ struct CompositorApp: App {
                     }
                 }
                 CommandMenu("图层") {
-                    Menu("New Adjustment Layer") {
+                    Menu("新建调整图层") {
                         ForEach(AdjustmentKind.allCases, id: \.self) { kind in
                             Button(kind.displayName + "…") { session.addAdjustment(kind) }
                         }
                     }.disabled(!session.canEditLayers || session.document == nil)
-                    Button("Edit Adjustment…") {
+                    Button("编辑调整…") {
                         session.adjustmentEditingID = session.activeLayerID
                     }.disabled(!session.canEditLayers || session.activeLayer?.adjustment == nil)
                     Divider()
-                    Button(session.canTransformSelection ? "Transform Selection" : "Transform Layer") { session.transformCommand() }
+                    Button(session.canTransformSelection ? "变换选区" : "变换图层") { session.transformCommand() }
                         .configuredKeyboardShortcut("t").disabled(!session.canTransform && !session.canTransformSelection)
                     Button(session.selection == nil ? "复制图层" : "通过拷贝新建图层") { session.layerViaCopy() }
                         .configuredKeyboardShortcut("j").disabled(!session.canCopyPixels && !(session.selection == nil && session.canEditLayers && session.activeLayer?.isGroup == false))
                     Divider()
-                    Button(session.activeLayer?.maskSourceID == nil ? "Create Clipping Mask" : "Release Clipping Mask") {
+                    Button(session.activeLayer?.maskSourceID == nil ? "创建剪贴蒙版" : "释放剪贴蒙版") {
                         if let id = session.activeLayerID { session.toggleClippingMask(id) }
                     }
                     .configuredKeyboardShortcut("g", modifiers: [.command, .option])
                     .disabled(session.activeLayerID.map { !session.canToggleClippingMask($0) } ?? true)
                     Divider()
-                    Button("Group Selected Layers") { session.groupSelectedLayers() }
+                    Button("编组所选图层") { session.groupSelectedLayers() }
                         .configuredKeyboardShortcut("g").disabled(!session.canEditLayers)
-                    Button("Move Out of Folder") { session.moveActiveLayerOutOfGroup() }
+                    Button("移出文件夹") { session.moveActiveLayerOutOfGroup() }
                         .disabled(!session.canEditLayers || session.activeLayer?.parentID == nil)
-                    Button("New Blank Layer") { session.addBlankLayer() }
+                    Button("新建空白图层") { session.addBlankLayer() }
                         .configuredKeyboardShortcut("n", modifiers: [.command, .shift]).disabled(!session.canEditLayers)
-                    Button("Rename Layer…") { session.renamingLayerID = session.activeLayerID }
+                    Button("重命名图层…") { session.renamingLayerID = session.activeLayerID }
                         .disabled(!session.canEditLayers || session.activeLayer == nil)
-                    Button(session.activeLayer?.isVisible == false ? "Show Layer" : "Hide Layer") {
+                    Button(session.activeLayer?.isVisible == false ? "显示图层" : "隐藏图层") {
                         if let id = session.activeLayerID { session.toggleLayerVisibility(id) }
                     }.disabled(!session.canEditLayers || session.activeLayer == nil)
                     Divider()
-                    Button("Move Layer Up") { session.moveActiveLayer(by: 1) }
+                    Button("上移图层") { session.moveActiveLayer(by: 1) }
                         .configuredKeyboardShortcut("]").disabled(!session.canMoveActiveLayer(by: 1))
-                    Button("Move Layer Down") { session.moveActiveLayer(by: -1) }
+                    Button("下移图层") { session.moveActiveLayer(by: -1) }
                         .configuredKeyboardShortcut("[").disabled(!session.canMoveActiveLayer(by: -1))
                     Group {
                         Button(session.mergeTitle) { session.mergeLayers() }
                             .configuredKeyboardShortcut("e").disabled(!session.canMergeLayers)
                         Divider()
-                        Button("Flip Layer Horizontal") { session.flipLayers(horizontally: true) }
+                        Button("水平翻转图层") { session.flipLayers(horizontally: true) }
                             .disabled(!session.canTransform)
-                        Button("Flip Layer Vertical") { session.flipLayers(horizontally: false) }
+                        Button("垂直翻转图层") { session.flipLayers(horizontally: false) }
                             .disabled(!session.canTransform)
                     }
                     Divider()
-                    Button(session.selectedEffect != nil ? "Delete " + session.selectedEffect!.kind.rawValue : session.isMaskSelected && session.activeLayer?.mask != nil ? "Delete Layer Mask" : session.selectedLayerIDs.count > 1 ? "Delete Layers" : "Delete Layer") {
+                    Button(session.selectedEffect != nil ? "删除" + session.selectedEffect!.kind.displayName : session.isMaskSelected && session.activeLayer?.mask != nil ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除图层" : "删除图层") {
                         session.deleteLayerOrMask()
                     }
                         .disabled(!session.canEditLayers || session.activeLayer == nil)

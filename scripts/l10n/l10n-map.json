@@ -1,5 +1,5 @@
 {
-  "description": "Additional English→Chinese pairs for upstream drift. Keyed by path relative to Compositor/.",
+  "description": "Additional English→Chinese pairs for upstream drift. Keyed by path relative to Compositor/. Deep UI pairs live in extra-pairs.json.",
   "files": {
     "UI/CompositorApp.swift": [],
     "CompositorApp.swift": [
@@ -30,6 +30,6 @@
     ]
   },
   "global": {
-    "notes": "v1.1.8 drift covered in apply_l10n: LayerBlendMode.softLight=柔光, ShapeKind.line=直线, ColorRange/WandMode/LayerEffectKind/HueSampleMode displayName, plus LayersPanel/LassoControls/HueSaturationSheet/FilterSheet UI copy."
+    "notes": "v1.1.8 deep UI l10n: tools bars, sheets, native layer list context menu/tooltips, levels/effects/type/shape/gradient controls, error/history names. Prefer extra-pairs.json for bulk UI; keep rawValue English on Codable enums."
   }
 }

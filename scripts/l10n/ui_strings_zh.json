@@ -1,0 +1,1053 @@
+{
+  "description": "Exact English→Chinese UI string pairs applied globally under Compositor/ after rsync. Keep accessibilityIdentifier / UTI / symbol names untouched.",
+  "pairs": [
+    [
+      "\"Check for Updates…\"",
+      "\"检查更新…\""
+    ],
+    [
+      "\"Pixel Grid (800% and above)\"",
+      "\"像素网格（800% 及以上）\""
+    ],
+    [
+      "\"Show Transform Controls\"",
+      "\"显示变换控件\""
+    ],
+    [
+      "\"Snap\"",
+      "\"对齐\""
+    ],
+    [
+      "Menu(\"Show\")",
+      "Menu(\"显示\")"
+    ],
+    [
+      "\"Grid\"",
+      "\"网格\""
+    ],
+    [
+      "\"Guides\"",
+      "\"参考线\""
+    ],
+    [
+      "\"Rulers\"",
+      "\"标尺\""
+    ],
+    [
+      "Menu(\"Snap To\")",
+      "Menu(\"对齐到\")"
+    ],
+    [
+      "\"Layers\"",
+      "\"图层\""
+    ],
+    [
+      "\"Document Bounds\"",
+      "\"文档边界\""
+    ],
+    [
+      "\"Lock Guides\"",
+      "\"锁定参考线\""
+    ],
+    [
+      "\"Clear Guides\"",
+      "\"清除参考线\""
+    ],
+    [
+      "\"Hide Compositor\"",
+      "\"隐藏 Compositor\""
+    ],
+    [
+      "\"Hide Others\"",
+      "\"隐藏其他\""
+    ],
+    [
+      "\"Show All\"",
+      "\"全部显示\""
+    ],
+    [
+      "Button(\"Cut\")",
+      "Button(\"剪切\")"
+    ],
+    [
+      "Button(\"Copy\")",
+      "Button(\"拷贝\")"
+    ],
+    [
+      "\"Copy Merged\"",
+      "\"合并拷贝\""
+    ],
+    [
+      "Button(\"Paste\")",
+      "Button(\"粘贴\")"
+    ],
+    [
+      "\"Keyboard Shortcuts…\"",
+      "\"键盘快捷键…\""
+    ],
+    [
+      "\"Fill with Foreground Color\"",
+      "\"填充前景色\""
+    ],
+    [
+      "\"Fill with Background Color\"",
+      "\"填充背景色\""
+    ],
+    [
+      "\"Clear Selection Pixels\"",
+      "\"清除选区像素\""
+    ],
+    [
+      "\"Content-Aware Fill…\"",
+      "\"内容识别填充…\""
+    ],
+    [
+      "Button(\"All\")",
+      "Button(\"全部\")"
+    ],
+    [
+      "Button(\"Deselect\")",
+      "Button(\"取消选择\")"
+    ],
+    [
+      "Button(\"Inverse\")",
+      "Button(\"反选\")"
+    ],
+    [
+      "\"Layer's Pixels\"",
+      "\"图层像素\""
+    ],
+    [
+      "Button(\"Subject\")",
+      "Button(\"主体\")"
+    ],
+    [
+      "\"Mask's Black Areas\"",
+      "\"蒙版黑色区域\""
+    ],
+    [
+      "\"Expand…\"",
+      "\"扩展…\""
+    ],
+    [
+      "\"Contract…\"",
+      "\"收缩…\""
+    ],
+    [
+      "\"Feather…\"",
+      "\"羽化…\""
+    ],
+    [
+      "\"Curves…\"",
+      "\"曲线…\""
+    ],
+    [
+      "\"Levels…\"",
+      "\"色阶…\""
+    ],
+    [
+      "\"Hue/Saturation…\"",
+      "\"色相/饱和度…\""
+    ],
+    [
+      "\"Invert Mask\"",
+      "\"反相蒙版\""
+    ],
+    [
+      "session.isMaskSelected ? \"Invert Mask\" : \"Invert\"",
+      "session.isMaskSelected ? \"反相蒙版\" : \"反相\""
+    ],
+    [
+      "\"Canvas Size…\"",
+      "\"画布大小…\""
+    ],
+    [
+      "\"Image Size…\"",
+      "\"图像大小…\""
+    ],
+    [
+      "\"Flip Canvas Horizontal\"",
+      "\"水平翻转画布\""
+    ],
+    [
+      "\"Flip Canvas Vertical\"",
+      "\"垂直翻转画布\""
+    ],
+    [
+      "Menu(\"New Adjustment Layer\")",
+      "Menu(\"新建调整图层\")"
+    ],
+    [
+      "\"Edit Adjustment…\"",
+      "\"编辑调整…\""
+    ],
+    [
+      "\"Transform Selection\"",
+      "\"变换选区\""
+    ],
+    [
+      "\"Transform Layer\"",
+      "\"变换图层\""
+    ],
+    [
+      "session.canTransformSelection ? \"Transform Selection\" : \"Transform Layer\"",
+      "session.canTransformSelection ? \"变换选区\" : \"变换图层\""
+    ],
+    [
+      "\"Create Clipping Mask\"",
+      "\"创建剪贴蒙版\""
+    ],
+    [
+      "\"Release Clipping Mask\"",
+      "\"释放剪贴蒙版\""
+    ],
+    [
+      "session.activeLayer?.maskSourceID == nil ? \"Create Clipping Mask\" : \"Release Clipping Mask\"",
+      "session.activeLayer?.maskSourceID == nil ? \"创建剪贴蒙版\" : \"释放剪贴蒙版\""
+    ],
+    [
+      "\"Group Selected Layers\"",
+      "\"编组所选图层\""
+    ],
+    [
+      "\"Move Out of Folder\"",
+      "\"移出文件夹\""
+    ],
+    [
+      "\"New Blank Layer\"",
+      "\"新建空白图层\""
+    ],
+    [
+      "\"Rename Layer…\"",
+      "\"重命名图层…\""
+    ],
+    [
+      "\"Show Layer\"",
+      "\"显示图层\""
+    ],
+    [
+      "\"Hide Layer\"",
+      "\"隐藏图层\""
+    ],
+    [
+      "session.activeLayer?.isVisible == false ? \"Show Layer\" : \"Hide Layer\"",
+      "session.activeLayer?.isVisible == false ? \"显示图层\" : \"隐藏图层\""
+    ],
+    [
+      "\"Move Layer Up\"",
+      "\"上移图层\""
+    ],
+    [
+      "\"Move Layer Down\"",
+      "\"下移图层\""
+    ],
+    [
+      "\"Flip Layer Horizontal\"",
+      "\"水平翻转图层\""
+    ],
+    [
+      "\"Flip Layer Vertical\"",
+      "\"垂直翻转图层\""
+    ],
+    [
+      "\"Eyedropper\"",
+      "\"吸管\""
+    ],
+    [
+      "\"Sample Ring\"",
+      "\"取样环\""
+    ],
+    [
+      "\"Select a tool\"",
+      "\"选择一个工具\""
+    ],
+    [
+      "Label(\"New canvas\", systemImage: \"plus\")",
+      "Label(\"新建画布\", systemImage: \"plus\")"
+    ],
+    [
+      "Button(\"Fit\") { session.fit() }",
+      "Button(\"适合\") { session.fit() }"
+    ],
+    [
+      ".help(\"Fit canvas in window (⌘0)\")",
+      ".help(\"在窗口中适合画布（⌘0）\")"
+    ],
+    [
+      ".help(\"Actual pixels (⌘1)\")",
+      ".help(\"实际像素（⌘1）\")"
+    ],
+    [
+      ".help(\"Zoom in (⌘+)\")",
+      ".help(\"放大（⌘+）\")"
+    ],
+    [
+      ".help(\"Zoom out (⌘−)\")",
+      ".help(\"缩小（⌘−）\")"
+    ],
+    [
+      "\"sRGB · Transparent\"",
+      "\"sRGB · 透明\""
+    ],
+    [
+      "\"Ready when you are\"",
+      "\"准备就绪\""
+    ],
+    [
+      "\"Importing images…\"",
+      "\"正在导入图像…\""
+    ],
+    [
+      ".help(\"Drag to resize the panel\")",
+      ".help(\"拖动以调整面板宽度\")"
+    ],
+    [
+      "levelsPanel.show(title: \"Levels\"",
+      "levelsPanel.show(title: \"色阶\""
+    ],
+    [
+      "adjustmentPanel.show(title: \"Hue/Saturation\"",
+      "adjustmentPanel.show(title: \"色相/饱和度\""
+    ],
+    [
+      "effectsPanel.show(title: selection.kind.rawValue",
+      "effectsPanel.show(title: selection.kind.displayName"
+    ],
+    [
+      "selectionAmountPanel.show(title: operation.rawValue + \" Selection\"",
+      "selectionAmountPanel.show(title: operation.displayName"
+    ],
+    [
+      "session.filterEdit?.kind.displayName ?? \"Filter\"",
+      "session.filterEdit?.kind.displayName ?? \"滤镜\""
+    ],
+    [
+      ".alert(\"Import couldn’t finish\"",
+      ".alert(\"导入未完成\""
+    ],
+    [
+      ".alert(\"Couldn’t paint\"",
+      ".alert(\"无法绘制\""
+    ],
+    [
+      ".alert(\"Couldn’t crop\"",
+      ".alert(\"无法裁剪\""
+    ],
+    [
+      "Text(session.tool == .spotHealing ? \"Spot Healing\" : session.tool == .cloneStamp ? \"Clone Stamp\" : session.tool == .blur ? \"Smear\"",
+      "Text(session.tool == .spotHealing ? \"污点修复\" : session.tool == .cloneStamp ? \"仿制图章\" : session.tool == .blur ? \"涂抹\""
+    ],
+    [
+      ".help(\"Paint with the foreground color (B), or erase pixels away (E)\")",
+      ".help(\"用前景色绘制（B），或擦除像素（E）\")"
+    ],
+    [
+      ".help(\"Liquify pushes pixels · Blur softens · Smudge drags color along\")",
+      ".help(\"液化推动像素 · 模糊柔化 · 涂抹拖动颜色\")"
+    ],
+    [
+      ".help(\"Keep the source moving with the brush between strokes; off starts every stroke at the source point\")",
+      ".help(\"笔触之间让取样源随笔刷移动；关闭则每次从取样点重新开始\")"
+    ],
+    [
+      ".help(\"Copy from the active layer only, or from every visible layer as shown\")",
+      ".help(\"仅从当前图层拷贝，或从所有可见图层拷贝\")"
+    ],
+    [
+      ".help(\"Press 1–9 for 10–90%, 0 for 100%\")",
+      ".help(\"按 1–9 设为 10–90%，0 为 100%\")"
+    ],
+    [
+      "\"Black · Hide\"",
+      "\"黑色 · 隐藏\""
+    ],
+    [
+      "\"White · Reveal\"",
+      "\"白色 · 显示\""
+    ],
+    [
+      ".help(\"Foreground color\")",
+      ".help(\"前景色\")"
+    ],
+    [
+      ".accessibilityLabel(\"Foreground color\")",
+      ".accessibilityLabel(\"前景色\")"
+    ],
+    [
+      "\"Option-click to set the source\"",
+      "\"Option 点击以设置取样源\""
+    ],
+    [
+      "\"Add Reveal-All Mask\"",
+      "\"添加显示全部蒙版\""
+    ],
+    [
+      "\"Add Hide-All Mask\"",
+      "\"添加隐藏全部蒙版\""
+    ],
+    [
+      "beginEdit(revealing ? \"Add Reveal-All Mask\" : \"Add Hide-All Mask\")",
+      "beginEdit(revealing ? \"添加显示全部蒙版\" : \"添加隐藏全部蒙版\")"
+    ],
+    [
+      "\"Disable Layer Mask\"",
+      "\"停用图层蒙版\""
+    ],
+    [
+      "\"Enable Layer Mask\"",
+      "\"启用图层蒙版\""
+    ],
+    [
+      "beginEdit(activeLayer?.mask?.isEnabled == true ? \"Disable Layer Mask\" : \"Enable Layer Mask\")",
+      "beginEdit(activeLayer?.mask?.isEnabled == true ? \"停用图层蒙版\" : \"启用图层蒙版\")"
+    ],
+    [
+      "\"Copy Layer Mask\"",
+      "\"拷贝图层蒙版\""
+    ],
+    [
+      "\"Replace Layer Mask\"",
+      "\"替换图层蒙版\""
+    ],
+    [
+      "beginEdit(layers[index].mask == nil ? \"Copy Layer Mask\" : \"Replace Layer Mask\")",
+      "beginEdit(layers[index].mask == nil ? \"拷贝图层蒙版\" : \"替换图层蒙版\")"
+    ],
+    [
+      "\"Unlink Layer Mask\"",
+      "\"取消链接图层蒙版\""
+    ],
+    [
+      "\"Link Layer Mask\"",
+      "\"链接图层蒙版\""
+    ],
+    [
+      "beginEdit(mask.isLinked ? \"Unlink Layer Mask\" : \"Link Layer Mask\")",
+      "beginEdit(mask.isLinked ? \"取消链接图层蒙版\" : \"链接图层蒙版\")"
+    ],
+    [
+      "\"Distort Layer Mask\"",
+      "\"扭曲图层蒙版\""
+    ],
+    [
+      "session.transformTargetsMask ? \"Transform Mask\" : \"Transform\"",
+      "session.transformTargetsMask ? \"变换蒙版\" : \"变换\""
+    ],
+    [
+      "\"Auto Select\"",
+      "\"自动选择\""
+    ],
+    [
+      ".help(\"Select layers by clicking the canvas. When off, hold Command to select a layer.\")",
+      ".help(\"点击画布即可选择图层。关闭时，按住 Command 选择图层。\")"
+    ],
+    [
+      "\"Show Controls\"",
+      "\"显示控件\""
+    ],
+    [
+      ".help(\"Show the transform box and handles (⌘H). When hidden, drag anywhere to move the layer.\")",
+      ".help(\"显示变换框与手柄（⌘H）。隐藏后，拖动画布任意位置即可移动图层。\")"
+    ],
+    [
+      ".help(\"Lock aspect ratio\")",
+      ".help(\"锁定长宽比\")"
+    ],
+    [
+      ".help(\"Scale width and height together, about the center\")",
+      ".help(\"以中心为基准，等比缩放宽高\")"
+    ],
+    [
+      "\"Flip H\"",
+      "\"水平翻转\""
+    ],
+    [
+      "\"Flip V\"",
+      "\"垂直翻转\""
+    ],
+    [
+      ".help(\"Swap foreground and background (X)\")",
+      ".help(\"交换前景色与背景色（X）\")"
+    ],
+    [
+      ".accessibilityLabel(\"Swap colors\")",
+      ".accessibilityLabel(\"交换颜色\")"
+    ],
+    [
+      ".help(\"Default colors (D)\")",
+      ".help(\"默认颜色（D）\")"
+    ],
+    [
+      ".accessibilityLabel(\"Default colors\")",
+      ".accessibilityLabel(\"默认颜色\")"
+    ],
+    [
+      "choosingMaskBackground == true ? \"Mask background\" : \"Mask foreground\"",
+      "choosingMaskBackground == true ? \"蒙版背景色\" : \"蒙版前景色\""
+    ],
+    [
+      "Text(\"Canvas Size\")",
+      "Text(\"画布大小\")"
+    ],
+    [
+      "\"Relative to current dimensions\"",
+      "\"相对于当前尺寸\""
+    ],
+    [
+      "\"Lock original aspect ratio\"",
+      "\"锁定原始长宽比\""
+    ],
+    [
+      "\"Final dimensions must be 1–30,000 pixels per side.\"",
+      "\"最终尺寸每边须为 1–30,000 像素。\""
+    ],
+    [
+      "\"Keeps this point fixed. Artwork is not scaled; cropped content remains outside the canvas.\"",
+      "\"固定该点。图像不缩放；裁剪内容仍在画布之外。\""
+    ],
+    [
+      "\"Canvas extension\"",
+      "\"画布扩展\""
+    ],
+    [
+      "\"Extension color\"",
+      "\"扩展颜色\""
+    ],
+    [
+      "Text(\"New canvas\")",
+      "Text(\"新建画布\")"
+    ],
+    [
+      "\"A blank space for your next composition.\"",
+      "\"为下一次创作准备的空白画布。\""
+    ],
+    [
+      "\"Transparent canvas · sRGB\"",
+      "\"透明画布 · sRGB\""
+    ],
+    [
+      "\"Enter whole numbers from 1 to 30,000 pixels.\"",
+      "\"请输入 1 到 30,000 像素的整数。\""
+    ],
+    [
+      "Button(\"Open project\")",
+      "Button(\"打开项目\")"
+    ],
+    [
+      "Button(\"Import image\")",
+      "Button(\"导入图像\")"
+    ],
+    [
+      "Button(\"Create canvas\")",
+      "Button(\"创建画布\")"
+    ],
+    [
+      ".help(\"Font face, including bold and italic variants\")",
+      ".help(\"字体，包括粗体与斜体变体\")"
+    ],
+    [
+      ".help(\"Text color\").accessibilityLabel(\"Text color\")",
+      ".help(\"文本颜色\").accessibilityLabel(\"文本颜色\")"
+    ],
+    [
+      ".help(\"Align \" + alignment.rawValue.lowercased())",
+      ".help(\"对齐\" + alignment.rawValue.lowercased())"
+    ],
+    [
+      ".accessibilityLabel(\"Align \" + alignment.rawValue.lowercased())",
+      ".accessibilityLabel(\"对齐\" + alignment.rawValue.lowercased())"
+    ],
+    [
+      ".help(\"Line height, baseline to baseline. Empty or 0 is Auto: 120% of the font size.\")",
+      ".help(\"行高（基线到基线）。留空或 0 表示自动：字号的 120%。\")"
+    ],
+    [
+      "Button(\"Edit Text\")",
+      "Button(\"编辑文本\")"
+    ],
+    [
+      "releasing ? \"Release clipping mask\" : \"Create clipping mask\"",
+      "releasing ? \"释放剪贴蒙版\" : \"创建剪贴蒙版\""
+    ],
+    [
+      "accessibilityDescription: \"Expand or collapse folder\"",
+      "accessibilityDescription: \"展开或折叠文件夹\""
+    ],
+    [
+      "eye.setAccessibilityLabel((enabled ? \"Hide \" : \"Show \") + kind.rawValue)",
+      "eye.setAccessibilityLabel((enabled ? \"隐藏\" : \"显示\") + kind.displayName)"
+    ],
+    [
+      "setAccessibilityLabel(kind.rawValue + \" effect\")",
+      "setAccessibilityLabel(kind.displayName + \"效果\")"
+    ],
+    [
+      ".accessibilityLabel(\"Project tabs\")",
+      ".accessibilityLabel(\"项目标签\")"
+    ],
+    [
+      ".help(\"Drop to open in a new canvas\")",
+      ".help(\"拖放到此以在新画布中打开\")"
+    ],
+    [
+      ".accessibilityLabel(\"Drop into new canvas\")",
+      ".accessibilityLabel(\"拖放到新建画布\")"
+    ],
+    [
+      ".accessibilityLabel(\"Unsaved changes\")",
+      ".accessibilityLabel(\"未存储的更改\")"
+    ],
+    [
+      ".help(targeted ? \"Open in a new project tab\" : \"New canvas (⌘N) · Drop images here for new tabs\")",
+      ".help(targeted ? \"在新项目标签中打开\" : \"新建画布（⌘N）· 将图像拖到此处以新建标签\")"
+    ],
+    [
+      "beginEdit(\"Delete Guide\")",
+      "beginEdit(\"删除参考线\")"
+    ],
+    [
+      "beginEdit(\"New Guide\")",
+      "beginEdit(\"新建参考线\")"
+    ],
+    [
+      "beginEdit(\"Move Guide\")",
+      "beginEdit(\"移动参考线\")"
+    ],
+    [
+      "beginEdit(\"Clear Guides\")",
+      "beginEdit(\"清除参考线\")"
+    ],
+    [
+      "beginEdit(\"Delete Layers\")",
+      "beginEdit(\"删除图层\")"
+    ],
+    [
+      "beginEdit(targets.count > 1 ? \"Duplicate Layers\" : \"Duplicate Layer\")",
+      "beginEdit(targets.count > 1 ? \"复制图层\" : \"复制图层\")"
+    ],
+    [
+      "beginEdit(horizontally ? \"Flip Horizontal\" : \"Flip Vertical\")",
+      "beginEdit(horizontally ? \"水平翻转\" : \"垂直翻转\")"
+    ],
+    [
+      "beginEdit(horizontally ? \"Flip Canvas Horizontal\" : \"Flip Canvas Vertical\")",
+      "beginEdit(horizontally ? \"水平翻转画布\" : \"垂直翻转画布\")"
+    ],
+    [
+      "\"Click the canvas to sample\"",
+      "\"点击画布取样\""
+    ],
+    [
+      ".accessibilityLabel(\"Saturation and brightness\")",
+      ".accessibilityLabel(\"饱和度与明度\")"
+    ],
+    [
+      ".accessibilityLabel(\"New color\")",
+      ".accessibilityLabel(\"新颜色\")"
+    ],
+    [
+      ".accessibilityLabel(\"Hex color\")",
+      ".accessibilityLabel(\"十六进制颜色\")"
+    ],
+    [
+      ".accessibilityLabel(label == \"R\" ? \"Red\" : label == \"G\" ? \"Green\" : \"Blue\")",
+      ".accessibilityLabel(label == \"R\" ? \"红色\" : label == \"G\" ? \"绿色\" : \"蓝色\")"
+    ],
+    [
+      "accessibilityDescription: \"Move pixels\"",
+      "accessibilityDescription: \"移动像素\""
+    ],
+    [
+      "accessibilityDescription: \"Sample color\"",
+      "accessibilityDescription: \"取样颜色\""
+    ],
+    [
+      "accessibilityDescription: out ? \"Zoom out\" : \"Zoom in\"",
+      "accessibilityDescription: out ? \"缩小\" : \"放大\""
+    ],
+    [
+      "ColorPicker(\"Background for transparency\"",
+      "ColorPicker(\"透明区域背景色\""
+    ],
+    [
+      "\"· encoded preview, fitted to window\"",
+      "\"· 编码预览，适合窗口\""
+    ],
+    [
+      "\"Updating preview…\"",
+      "\"正在更新预览…\""
+    ],
+    [
+      "Button(\"Export…\")",
+      "Button(\"导出…\")"
+    ],
+    [
+      "\"Click a shortcut, then press its new key combination. Changes apply when you save.\"",
+      "\"点击快捷键，然后按下新的组合键。保存后生效。\""
+    ],
+    [
+      "\"Text fields keep standard macOS editing keys. Dialogs share the Apply/Cancel assignments above. Numeric fields use Up/Down, with Shift for larger steps. Standard macOS commands include ⌘Q to quit and ⌃⌘F for full screen. The shortcut editor itself always uses Return to save and Esc to cancel when not recording.\"",
+      "\"文本框保留 macOS 标准编辑键。对话框共用上方的“应用/取消”快捷键。数值框用上下方向键，按住 Shift 步进更大。标准 macOS 命令包括 ⌘Q 退出、⌃⌘F 全屏。快捷键编辑器在非录制状态下始终用 Return 保存、Esc 取消。\""
+    ],
+    [
+      "\"Option temporarily selects the eyedropper in painting tools. Shift constrains shapes/movement or adds to a selection; Option subtracts from selections or draws from center. Command-drag moves selected pixels; Command-Option-drag copies them. Option-drag duplicates layers/folders/effects; Option-click at a layer boundary toggles clipping. Command-click a thumbnail loads its selection. Control bypasses snapping. Right-drag adjusts brush size. Modifier-and-mouse gestures are fixed.\"",
+      "\"绘制工具中按住 Option 临时切换到吸管。Shift 约束形状/移动或添加选区；Option 从选区减去或从中心绘制。⌘ 拖动移动所选像素；⌘⌥ 拖动拷贝像素。⌥ 拖动复制图层/文件夹/效果；⌥ 点击图层边界切换剪贴。⌘ 点击缩略图载入选区。Control 临时绕过对齐。右键拖动调整笔刷大小。修饰键与鼠标手势固定不变。\""
+    ],
+    [
+      "\"Contextual keys & mouse gestures\"",
+      "\"上下文按键与鼠标手势\""
+    ],
+    [
+      "Button(\"Restore Defaults\")",
+      "Button(\"恢复默认\")"
+    ],
+    [
+      "\"Press a shortcut\"",
+      "\"请按下快捷键\""
+    ],
+    [
+      "\"Loading histogram…\"",
+      "\"正在加载直方图…\""
+    ],
+    [
+      "session.adjustmentOriginal != nil ? \"Underlying pixels · alpha-weighted histogram\" : session.selection == nil ? \"Original pixels · alpha-weighted histogram\" : \"Original pixels · selection and alpha-weighted histogram\"",
+      "session.adjustmentOriginal != nil ? \"底层像素 · 加权 alpha 直方图\" : session.selection == nil ? \"原始像素 · 加权 alpha 直方图\" : \"原始像素 · 选区与加权 alpha 直方图\""
+    ],
+    [
+      "\"Click to add a point. Drag to adjust.\"",
+      "\"点击添加控制点，拖动进行调整。\""
+    ],
+    [
+      "Button(\"Remove point\")",
+      "Button(\"删除控制点\")"
+    ],
+    [
+      "Button(\"Reset curve\")",
+      "Button(\"重置曲线\")"
+    ],
+    [
+      "beginEdit(\"Edit Text\")",
+      "beginEdit(\"编辑文本\")"
+    ],
+    [
+      "beginEdit(\"New Text Layer\")",
+      "beginEdit(\"新建文本图层\")"
+    ],
+    [
+      "editName: \"New Text Layer\"",
+      "editName: \"新建文本图层\""
+    ],
+    [
+      "beginEdit(\"Fill Text\")",
+      "beginEdit(\"填充文本\")"
+    ],
+    [
+      "\"Resizes layer pixels and applies existing transforms. Undo restores the originals.\"",
+      "\"调整图层像素尺寸并应用已有变换。撤销可恢复原始像素。\""
+    ],
+    [
+      "\"Only print dimensions and resolution change. Pixels stay unchanged.\"",
+      "\"仅打印尺寸与分辨率会变化。像素保持不变。\""
+    ],
+    [
+      ".help(session.selection == nil ? \"Add layer mask\" : \"Add layer mask (the selection becomes black)\")",
+      ".help(session.selection == nil ? \"添加图层蒙版\" : \"添加图层蒙版（选区转为黑色）\")"
+    ],
+    [
+      ".accessibilityLabel(\"Add layer mask\")",
+      ".accessibilityLabel(\"添加图层蒙版\")"
+    ],
+    [
+      ".help(\"Shift-U (or Tab) steps through Rectangle, Ellipse and Line\")",
+      ".help(\"Shift-U（或 Tab）在矩形、椭圆、直线之间切换\")"
+    ],
+    [
+      ".help(\"Round the rectangle's corners by this many pixels; 0 keeps them square\")",
+      ".help(\"按该像素值圆化矩形圆角；0 保持直角\")"
+    ],
+    [
+      ".help(\"Shapes fill with the foreground color; click to change it\")",
+      ".help(\"形状使用前景色填充；点击可更换颜色\")"
+    ],
+    [
+      "setAccessibilityLabel(axis == .horizontal ? \"Horizontal ruler\" : \"Vertical ruler\")",
+      "setAccessibilityLabel(axis == .horizontal ? \"水平标尺\" : \"垂直标尺\")"
+    ],
+    [
+      ".help(kind.rawValue + \" color\")",
+      ".help(kind.displayName + \"颜色\")"
+    ],
+    [
+      ".accessibilityLabel(kind.rawValue + \" color\")",
+      ".accessibilityLabel(kind.displayName + \"颜色\")"
+    ],
+    [
+      "Text(edit?.committing == true ? \"Applying…\" : \"Working…\")",
+      "Text(edit?.committing == true ? \"正在应用…\" : \"处理中…\")"
+    ],
+    [
+      ".help(\"Linear runs along the line; Radial spreads out from the start point\")",
+      ".help(\"线性沿端点连线延伸；径向从起点向外扩散\")"
+    ],
+    [
+      ".accessibilityLabel(\"Zoom percentage\")",
+      ".accessibilityLabel(\"缩放百分比\")"
+    ],
+    [
+      ".help(\"Zoom percentage (0.1–3200%). Press Return to apply.\")",
+      ".help(\"缩放百分比（0.1–3200%）。按 Return 应用。\")"
+    ],
+    [
+      "beginEdit(edit.group == nil ? \"Distort\" : \"Distort Layers\")",
+      "beginEdit(edit.group == nil ? \"扭曲\" : \"扭曲图层\")"
+    ],
+    [
+      "beginEdit(\"Transform Selection\")",
+      "beginEdit(\"变换选区\")"
+    ],
+    [
+      "applyDocumentSize(snapshot, actionName: \"Image Size\")",
+      "applyDocumentSize(snapshot, actionName: \"图像大小\")"
+    ],
+    [
+      "alert.informativeText = \"Your changes will be lost if you don’t save them.\"",
+      "alert.informativeText = \"如果不存储，所做的更改将会丢失。\""
+    ],
+    [
+      "textView.setAccessibilityLabel(\"Canvas text\")",
+      "textView.setAccessibilityLabel(\"画布文本\")"
+    ],
+    [
+      "session.shapeKind == .line ? \"45°\" : session.shapeKind == .rectangle ? \"square\" : \"circle\"",
+      "session.shapeKind == .line ? \"45°\" : session.shapeKind == .rectangle ? \"正方形\" : \"圆形\""
+    ],
+    [
+      "TextField(\"Search shortcuts\"",
+      "TextField(\"搜索快捷键\""
+    ],
+    [
+      "\"Drag an ellipse · Shift add · Option subtract · Shift again mid-drag circle · Drag inside to move · Delete clears · ⌘D deselect\"",
+      "\"拖动绘制椭圆 · Shift 添加 · Option 减去 · 拖动中再按 Shift 变正圆 · 在内部拖动移动 · Delete 清除 · ⌘D 取消选择\""
+    ],
+    [
+      "\"Drag a rectangle · Shift add · Option subtract · Shift again mid-drag square · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect\"",
+      "\"拖动绘制矩形 · Shift 添加 · Option 减去 · 拖动中再按 Shift 变正方形 · 在内部拖动移动 · ⌘ 拖动移动像素 · Delete 清除 · ⌘D 取消选择\""
+    ],
+    [
+      "\"Click an object to select its outline · Tab for Wand · Shift add · Option subtract · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect\"",
+      "\"点击对象选择其轮廓 · Tab 切换魔棒 · Shift 添加 · Option 减去 · 在内部拖动移动 · ⌘ 拖动移动像素 · Delete 清除 · ⌘D 取消选择\""
+    ],
+    [
+      "\"Click to select similar colors · Tab for Object · Shift add · Option subtract · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect\"",
+      "\"点击选取相似颜色 · Tab 切换对象 · Shift 添加 · Option 减去 · 在内部拖动移动 · ⌘ 拖动移动像素 · Delete 清除 · ⌘D 取消选择\""
+    ],
+    [
+      "\"Drag to select · Drag inside to move · Shift add · Option subtract · Delete clears · ⌥⌫/⌘⌫ fill · ⌘D deselect\"",
+      "\"拖动建立选区 · 在内部拖动移动 · Shift 添加 · Option 减去 · Delete 清除 · ⌥⌫/⌘⌫ 填充 · ⌘D 取消选择\""
+    ],
+    [
+      "\"Click corners · Click start, double-click or Enter to close · Delete removes corner · Escape cancel\"",
+      "\"点击各角点 · 点击起点/双击/回车闭合 · Delete 删除角点 · Escape 取消\""
+    ],
+    [
+      "\"Drag to erase\"",
+      "\"拖动擦除\""
+    ],
+    [
+      "\"Drag to paint\"",
+      "\"拖动绘制\""
+    ],
+    [
+      "\" · [ ] size · Shift-[ ] hardness · 1–0 opacity · Escape cancel · Space to pan\"",
+      "\" · [ ] 大小 · Shift-[ ] 硬度 · 1–0 不透明度 · Escape 取消 · 空格平移\""
+    ],
+    [
+      "\"Drag to soften\"",
+      "\"拖动模糊\""
+    ],
+    [
+      "\"Drag to smudge\"",
+      "\"拖动涂抹\""
+    ],
+    [
+      "\"Drag to push pixels\"",
+      "\"拖动液化像素\""
+    ],
+    [
+      "\" · [ ] size · Shift-[ ] hardness · 1–0 strength · Space to pan\"",
+      "\" · [ ] 大小 · Shift-[ ] 硬度 · 1–0 强度 · 空格平移\""
+    ],
+    [
+      "\"Option-click to set the source · Drag to clone · [ ] size · Shift-[ ] hardness · 1–0 opacity · Space to pan\"",
+      "\"Option 点击设置取样源 · 拖动仿制 · [ ] 大小 · Shift-[ ] 硬度 · 1–0 不透明度 · 空格平移\""
+    ],
+    [
+      "\"Drag over blemishes to heal · [ ] size · Shift-[ ] hardness · Escape cancel · Space to pan\"",
+      "\"在瑕疵上拖动修复 · [ ] 大小 · Shift-[ ] 硬度 · Escape 取消 · 空格平移\""
+    ],
+    [
+      "\"Drag a text box · Click text to edit · Drag box handles to resize · ⌘Return finish · Escape cancel\"",
+      "\"拖动创建文本框 · 点击文本编辑 · 拖动手柄改大小 · ⌘Return 完成 · Escape 取消\""
+    ],
+    [
+      "\" · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan\"",
+      "\" · Option 从中心绘制 · Shift-U 或 Tab 切换形状 · Escape 取消 · 空格平移\""
+    ],
+    [
+      "\"Drag to draw · Drag ends to adjust · Shift 45° · 1–0 opacity · Enter apply · Escape cancel\"",
+      "\"拖动绘制 · 拖动端点调整 · Shift 45° · 1–0 不透明度 · 回车应用 · Escape 取消\""
+    ],
+    [
+      "\"Drag to crop · Enter apply · Escape cancel · Space to pan\"",
+      "\"拖动裁剪 · 回车应用 · Escape 取消 · 空格平移\""
+    ],
+    [
+      "\"Drag to move · Handles to resize · Circle to rotate · 1–0 layer opacity · Space to pan\"",
+      "\"拖动移动 · 手柄调整大小 · 圆形手柄旋转 · 1–0 图层不透明度 · 空格平移\""
+    ],
+    [
+      "\"Drag to pan · Pinch to zoom\"",
+      "\"拖动平移 · 双指缩放\""
+    ],
+    [
+      "\"No tool selected · Press a tool's key to pick one · Space to pan\"",
+      "\"未选择工具 · 按工具快捷键选择 · 空格平移\""
+    ],
+    [
+      "\"Click to zoom in · Option-click to zoom out · Drag right or left to zoom smoothly · Space to pan\"",
+      "\"点击放大 · Option 点击缩小 · 左右拖动平滑缩放 · 空格平移\""
+    ],
+    [
+      "\"Drag to draw a shape on a new layer · Shift \"",
+      "\"在新图层上拖动绘制形状 · Shift \""
+    ],
+    [
+      "\"Pan\"",
+      "\"抓手\""
+    ],
+    [
+      "\"Zoom\"",
+      "\"缩放\""
+    ],
+    [
+      "\"Crop\"",
+      "\"裁剪\""
+    ],
+    [
+      "\"Ratio\"",
+      "\"比例\""
+    ],
+    [
+      "\"Quality\"",
+      "\"质量\""
+    ],
+    [
+      "\"Distribution\"",
+      "\"分布\""
+    ],
+    [
+      "\"Position\"",
+      "\"位置\""
+    ],
+    [
+      "\"Range\"",
+      "\"范围\""
+    ],
+    [
+      "\"Hex\"",
+      "\"十六进制\""
+    ],
+    [
+      "\"Amount\"",
+      "\"数量\""
+    ],
+    [
+      "\"Channel\"",
+      "\"通道\""
+    ],
+    [
+      "\"Feather\"",
+      "\"羽化\""
+    ],
+    [
+      "\"Deselect\"",
+      "\"取消选择\""
+    ],
+    [
+      "\"Inverse\"",
+      "\"反选\""
+    ],
+    [
+      "\"Clear\"",
+      "\"清除\""
+    ],
+    [
+      "\"Font\"",
+      "\"字体\""
+    ],
+    [
+      "Label(\"New\", systemImage: \"plus\")",
+      "Label(\"新建\", systemImage: \"plus\")"
+    ],
+    [
+      "Text(\"OK\")",
+      "Text(\"好\")"
+    ],
+    [
+      "Text(\"Cancel\")",
+      "Text(\"取消\")"
+    ],
+    [
+      "setAccessibilityLabel(\"Canvas\")",
+      "setAccessibilityLabel(\"画布\")"
+    ],
+    [
+      "setAccessibilityLabel(\"Font\")",
+      "setAccessibilityLabel(\"字体\")"
+    ],
+    [
+      "setAccessibilityLabel(\"Hue\")",
+      "setAccessibilityLabel(\"色相\")"
+    ],
+    [
+      ".help(\"New canvas (⌘N)\")",
+      ".help(\"新建画布（⌘N）\")"
+    ],
+    [
+      "name: \"Deselect\")",
+      "name: \"取消选择\")"
+    ],
+    [
+      "name: \"Inverse\")",
+      "name: \"反选\")"
+    ],
+    [
+      "name: \"Clear\")",
+      "name: \"清除\")"
+    ],
+    [
+      "name: \"Levels\")",
+      "name: \"色阶\")"
+    ],
+    [
+      "name: \"Add \" + kind.rawValue)",
+      "name: \"添加\" + kind.displayName)"
+    ],
+    [
+      "name: \"Cancel \" + editing.kind.rawValue)",
+      "name: \"取消\" + editing.kind.displayName)"
+    ],
+    [
+      "name: \"Edit \" + editing.kind.rawValue)",
+      "name: \"编辑\" + editing.kind.displayName)"
+    ],
+    [
+      "name: \"Copy \" + kind.rawValue)",
+      "name: \"拷贝\" + kind.displayName)"
+    ],
+    [
+      "name: \"Remove \" + selectedEffect.kind.rawValue)",
+      "name: \"移除\" + selectedEffect.kind.displayName)"
+    ]
+  ]
+}

@@ -7,8 +7,8 @@ struct CropControls: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Text("Crop").font(ToolHeaderStyle.titleFont)
-            Picker("Ratio", selection: $session.cropRatioChoice) {
+            Text("裁剪").font(ToolHeaderStyle.titleFont)
+            Picker("比例", selection: $session.cropRatioChoice) {
                 ForEach(["自由", "原始", "1:1", "4:3", "16:9"], id: \.self) { Text($0) }
             }.frame(width: 170)
                 .onChange(of: session.cropRatioChoice) { _, _ in session.changeCropRatio() }

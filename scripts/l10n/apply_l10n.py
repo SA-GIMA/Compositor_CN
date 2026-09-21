@@ -343,6 +343,21 @@ extension SpotHealingMode {
 }
 """,
     ),
+    (
+        "Document/LevelsAutomatic.swift",
+        "nonisolated enum LevelsAuto: String, CaseIterable {",
+        """
+extension LevelsAuto {
+    nonisolated var displayName: String {
+        switch self {
+        case .contrast: "对比度"
+        case .color: "颜色"
+        case .neutral: "颜色+中性中间调"
+        }
+    }
+}
+""",
+    ),
 ]
 
 # Exact string replacements per file (relative to Compositor/).
@@ -882,6 +897,48 @@ def main() -> int:
             stats["hit"] += hit
             stats["miss"] += miss
             print(f"  extra {rel}: hit={hit} miss={miss}")
+        for rel, pairs in extra.get("global", {}).get("files", {}).items() if False else []:
+            pass
+        # Optional supplemental pair file used for deep UI localization.
+        for name in ("extra-pairs.json", "ui-pairs.json"):
+            extra_path = Path(args.map).parent / name
+            if extra_path.exists():
+                payload = json.loads(extra_path.read_text(encoding="utf-8"))
+                for rel, pairs in payload.get("files", {}).items():
+                    hit, miss = apply_pairs(comp / rel, [tuple(p) for p in pairs])
+                    stats["hit"] += hit
+                    stats["miss"] += miss
+                    print(f"  ui {rel}: hit={hit} miss={miss}")
+                for old, new in payload.get("global", []):
+                    # apply globally under Compositor/
+                    changed = 0
+                    for path in comp.rglob("*.swift"):
+                        text = path.read_text(encoding="utf-8")
+                        if old in text:
+                            path.write_text(text.replace(old, new), encoding="utf-8")
+                            changed += 1
+                    stats["hit"] += changed
+                    print(f"  ui-global {old[:50]!r} -> files={changed}")
+        global_extra = extra.get("global_pairs") or extra.get("pairs")
+        if global_extra:
+            pairs = [tuple(p) for p in global_extra]
+            for path in comp.rglob("*.swift"):
+                hit, miss = apply_pairs(path, pairs)
+                stats["hit"] += hit
+            print(f"  global extra pairs on {len(list(comp.rglob('*.swift')))} files")
+
+    ui_map = root / "scripts" / "l10n" / "ui_strings_zh.json"
+    if ui_map.exists():
+        data = json.loads(ui_map.read_text(encoding="utf-8"))
+        pairs = [tuple(p) for p in data.get("pairs", [])]
+        files = list(comp.rglob("*.swift"))
+        hit_total = miss_total = 0
+        for path in files:
+            hit, miss = apply_pairs(path, pairs)
+            hit_total += hit
+            miss_total += miss
+        stats["hit"] += hit_total
+        print(f"  ui_strings_zh: hits={hit_total} misses={miss_total} files={len(files)}")
 
     # Ensure personal packaging script exists
     pkg = root / "scripts" / "package-personal.sh"

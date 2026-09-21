@@ -398,7 +398,7 @@ final class EditorSession {
         let carried = selection.reduce(into: Set<UUID>()) { $0.formUnion(descendantIDs(of: $1)) }
         let targets = (document?.layers ?? []).filter { selection.contains($0.id) && !carried.contains($0.id) }.map(\.id)
         guard !targets.isEmpty else { return }
-        beginEdit(targets.count > 1 ? "Duplicate Layers" : "Duplicate Layer")
+        beginEdit(targets.count > 1 ? "复制图层" : "复制图层")
         var copies: [UUID] = []
         for id in targets {
             selectLayer(id)

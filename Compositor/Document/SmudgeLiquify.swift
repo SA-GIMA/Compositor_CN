@@ -191,7 +191,7 @@ final class WarpStroke {
 extension EditorSession {
     func beginWarp(at point: CGPoint) {
         guard canPaint, !isMaskSelected, let layer = activeLayer, let image = layer.asset?.image, let document else {
-            if isMaskSelected { brushError = "Smudge and Liquify work on a layer's pixels, not its mask." }
+            if isMaskSelected { brushError = "涂抹与液化作用于图层像素，而非蒙版。" }
             return
         }
         finishOpacityEdit()

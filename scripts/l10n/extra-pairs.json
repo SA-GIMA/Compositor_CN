@@ -1,0 +1,242 @@
+{
+  "description": "Deep UI English→Chinese pairs for Compositor_CN after v1.1.8. Applied after FILE_PAIRS via apply_l10n.py --map l10n-map.json.",
+  "files": {
+    "UI/BrushControls.swift": [
+      ["session.brushMode == .erase ? \"Eraser\" : \"Brush\")", "session.brushMode == .erase ? \"橡皮擦\" : \"画笔\")"],
+      ["Picker(\"Mode\", selection: $session.brushMode)", "Picker(\"模式\", selection: $session.brushMode)"],
+      ["Picker(\"Mode\", selection: $session.blurMode)", "Picker(\"模式\", selection: $session.blurMode)"],
+      ["Picker(\"Type\", selection: $session.spotHealingMode)", "Picker(\"类型\", selection: $session.spotHealingMode)"],
+      ["Toggle(\"Aligned\", isOn: $session.cloneSettings.aligned)", "Toggle(\"对齐\", isOn: $session.cloneSettings.aligned)"],
+      ["Picker(\"Sample\", selection: $session.cloneSettings.sampleAllLayers)", "Picker(\"取样\", selection: $session.cloneSettings.sampleAllLayers)"],
+      ["TextField(\"Size\", value:", "TextField(\"大小\", value:"],
+      ["TextField(\"Hardness\", value:", "TextField(\"硬度\", value:"],
+      ["Text(session.tool == .blur ? \"Strength\" : \"Opacity\")", "Text(session.tool == .blur ? \"强度\" : \"不透明度\")"],
+      ["TextField(\"Opacity\", value:", "TextField(\"不透明度\", value:"],
+      ["Picker(\"Paint\", selection: $session.maskPaintWhite)", "Picker(\"绘制\", selection: $session.maskPaintWhite)"],
+      ["Text(\"Color\")", "Text(\"颜色\")"],
+      ["Text(\"Mask\")", "Text(\"蒙版\")"]
+    ],
+    "UI/ImageSizeSheet.swift": [
+      ["@State private var unit = \"Pixels\"", "@State private var unit = \"像素\""],
+      ["($0 != \"Pixels\" && $0 != \"Percent\")", "($0 != \"像素\" && $0 != \"百分比\")"],
+      ["case \"Percent\": return pixels / Double(original) * 100", "case \"百分比\": return pixels / Double(original) * 100"],
+      ["case \"Inches\": return pixels / resolution", "case \"英寸\": return pixels / resolution"],
+      ["case \"Centimeters\": return pixels / resolution * 2.54", "case \"厘米\": return pixels / resolution * 2.54"],
+      ["(unit == \"Centimeters\" ? 2.54 : 1)", "(unit == \"厘米\" ? 2.54 : 1)"],
+      ["case \"Percent\": pixels = value / 100 * Double(isWidth ? document.width : document.height)", "case \"百分比\": pixels = value / 100 * Double(isWidth ? document.width : document.height)"],
+      ["case \"Inches\": pixels = value * resolution", "case \"英寸\": pixels = value * resolution"],
+      ["case \"Centimeters\": pixels = value / 2.54 * resolution", "case \"厘米\": pixels = value / 2.54 * resolution"],
+      ["unit == \"Inches\" || unit == \"Centimeters\"", "unit == \"英寸\" || unit == \"厘米\""],
+      ["if unit == \"Pixels\" || unit == \"Percent\" { unit = \"Inches\" }", "if unit == \"像素\" || unit == \"百分比\" { unit = \"英寸\" }"],
+      ["Text(\"Current: \\(document.width) × \\(document.height) pixels\")", "Text(\"当前：\\(document.width) × \\(document.height) 像素\")"],
+      ["Picker(\"Units\", selection: $unit)", "Picker(\"单位\", selection: $unit)"],
+      ["Text(\"Width\").frame(width: 75, alignment: .leading)", "Text(\"宽度\").frame(width: 75, alignment: .leading)"],
+      ["TextField(\"Width\", value: dimension(isWidth: true)", "TextField(\"宽度\", value: dimension(isWidth: true)"],
+      ["Text(\"Height\").frame(width: 75, alignment: .leading)", "Text(\"高度\").frame(width: 75, alignment: .leading)"],
+      ["TextField(\"Height\", value: dimension(isWidth: false)", "TextField(\"高度\", value: dimension(isWidth: false)"],
+      ["Toggle(\"Lock aspect ratio\", isOn: $locked)", "Toggle(\"锁定长宽比\", isOn: $locked)"],
+      ["Text(\"Resolution\")", "Text(\"分辨率\")"],
+      ["TextField(\"Resolution\", value: $resolution", "TextField(\"分辨率\", value: $resolution"],
+      ["Text(\"pixels/inch\")", "Text(\"像素/英寸\")"],
+      ["Toggle(\"Resample\", isOn: $resample)", "Toggle(\"重定像素\", isOn: $resample)"],
+      ["Picker(\"Sampling\", selection: $sampling)", "Picker(\"采样\", selection: $sampling)"],
+      ["Text(valid ? \"Result: \\(Int(width.rounded())) × \\(Int(height.rounded())) pixels\" : \"Use 1–30,000 pixels per side, up to 100 megapixels, and 1–9,600 pixels/inch.\")", "Text(valid ? \"结果：\\(Int(width.rounded())) × \\(Int(height.rounded())) 像素\" : \"每边 1–30,000 像素，总计不超过 1 亿像素；分辨率为 1–9,600 像素/英寸。\")"]
+    ],
+    "UI/CanvasSizeSheet.swift": [
+      ["private let anchorNames = [\"Top left\", \"Top center\", \"Top right\", \"Middle left\", \"Center\", \"Middle right\", \"Bottom left\", \"Bottom center\", \"Bottom right\"]", "private let anchorNames = [\"左上\", \"上中\", \"右上\", \"左中\", \"中心\", \"右中\", \"左下\", \"下中\", \"右下\"]"],
+      ["@State private var extensionChoice = \"Transparent\"", "@State private var extensionChoice = \"透明\""],
+      ["case \"Transparent\": return nil", "case \"透明\": return nil"],
+      ["case \"Black\": color = .black", "case \"黑色\": color = .black"],
+      ["case \"Foreground\": color = foreground.nsColor", "case \"前景色\": color = foreground.nsColor"],
+      ["case \"White\": color = .white", "case \"白色\": color = .white"],
+      ["case \"Background\": color = background.nsColor", "case \"背景色\": color = background.nsColor"],
+      ["Text(\"Current: \\(draft.originalWidth) × \\(draft.originalHeight) pixels\")", "Text(\"当前：\\(draft.originalWidth) × \\(draft.originalHeight) 像素\")"],
+      ["Text(\"\\(bytes(draft.originalWidth, draft.originalHeight)) uncompressed RGBA canvas\")", "Text(\"\\(bytes(draft.originalWidth, draft.originalHeight)) 未压缩 RGBA 画布\")"],
+      ["Picker(\"Units\", selection: $draft.unit)", "Picker(\"单位\", selection: $draft.unit)"],
+      ["Text(\"Width\").frame(width: 60, alignment: .leading)", "Text(\"宽度\").frame(width: 60, alignment: .leading)"],
+      ["TextField(\"Width\", value: dimension(true)", "TextField(\"宽度\", value: dimension(true)"],
+      ["Text(\"Height\").frame(width: 60, alignment: .leading)", "Text(\"高度\").frame(width: 60, alignment: .leading)"],
+      ["TextField(\"Height\", value: dimension(false)", "TextField(\"高度\", value: dimension(false)"],
+      ["Text(\"New: \\(Int(draft.width.rounded())) × \\(Int(draft.height.rounded())) pixels · \\(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) uncompressed\")", "Text(\"新尺寸：\\(Int(draft.width.rounded())) × \\(Int(draft.height.rounded())) 像素 · \\(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) 未压缩\")"],
+      ["Text(\"Anchor\")", "Text(\"定位点\")"],
+      [".accessibilityValue(index == anchor ? \"Selected\" : \"\")", ".accessibilityValue(index == anchor ? \"已选中\" : \"\")"],
+      ["ForEach([\"Transparent\", \"Foreground\", \"Background\", \"Black\", \"White\", \"Custom\"], id: \\.self) { Text($0) }", "ForEach([\"透明\", \"前景色\", \"背景色\", \"黑色\", \"白色\", \"自定\"], id: \\.self) { Text($0) }"],
+      ["if extensionChoice == \"Custom\" {", "if extensionChoice == \"自定\" {"]
+    ],
+    "UI/LevelsSheet.swift": [
+      ["Picker(\"Channel\", selection:", "Picker(\"通道\", selection:"],
+      ["field(\"Input black\", value(\\.black), decimals: 0)", "field(\"输入黑场\", value(\\.black), decimals: 0)"],
+      ["field(\"Gamma\", value(\\.gamma), decimals: 2)", "field(\"中间调\", value(\\.gamma), decimals: 2)"],
+      ["field(\"Input white\", value(\\.white), decimals: 0)", "field(\"输入白场\", value(\\.white), decimals: 0)"],
+      ["field(\"Output black\", value(\\.outputBlack), decimals: 0)", "field(\"输出黑场\", value(\\.outputBlack), decimals: 0)"],
+      ["field(\"Output white\", value(\\.outputWhite), decimals: 0)", "field(\"输出白场\", value(\\.outputWhite), decimals: 0)"],
+      ["Text(\"Sample\").font(.caption)", "Text(\"取样\").font(.caption)"],
+      ["Label(mode.rawValue, systemImage: \"eyedropper\")", "Label(mode.displayName, systemImage: \"eyedropper\")"],
+      ["Text(\"Click the original layer to set \\(mode.rawValue.lowercased()). Click the eyedropper again to stop.\")", "Text(\"点击原始图层以设置\\(mode.displayName)。再次点击吸管结束取样。\")"],
+      ["Text(\"Auto\").font(.caption)", "Text(\"自动\").font(.caption)"],
+      ["Button(mode.rawValue) { session.autoLevels(mode) }", "Button(mode.displayName) { session.autoLevels(mode) }"],
+      ["Toggle(\"Preview\", isOn:", "Toggle(\"预览\", isOn:"],
+      ["Button(\"Reset\") { edit?.sampleMode = nil", "Button(\"重置\") { edit?.sampleMode = nil"],
+      ["let names = output ? [\"Output black\", \"Output white\"] : [\"Input black\", \"Gamma\", \"Input white\"]", "let names = output ? [\"输出黑场\", \"输出白场\"] : [\"输入黑场\", \"中间调\", \"输入白场\"]"],
+      [".accessibilityLabel(\"Original \\(settings.channel.rawValue) histogram\")", ".accessibilityLabel(\"\\(settings.channel.displayName)原始直方图\")"],
+      [".help(\"Linear histogram with automatic vertical scaling. Tall spikes may extend beyond the graph; all tones from 0 to 255 remain included.\")", ".help(\"线性直方图，纵轴自动缩放。高峰可能超出图形范围；0–255 的全部色阶均已计入。\")"]
+    ],
+    "UI/GradientControls.swift": [
+      ["Text(\"Gradient\").font(ToolHeaderStyle.titleFont)", "Text(\"渐变\").font(ToolHeaderStyle.titleFont)"],
+      ["Picker(\"Shape\", selection: $session.gradientSettings.shape)", "Picker(\"形状\", selection: $session.gradientSettings.shape)"],
+      ["Picker(\"Colors\", selection: $session.gradientSettings.style)", "Picker(\"颜色\", selection: $session.gradientSettings.style)"],
+      ["Toggle(\"Reverse\", isOn: $session.gradientSettings.reversed)", "Toggle(\"反向\", isOn: $session.gradientSettings.reversed)"],
+      ["Text(\"Opacity\")", "Text(\"不透明度\")"],
+      ["TextField(\"Opacity\", value:", "TextField(\"不透明度\", value:"],
+      ["Text(\"Mask\")", "Text(\"蒙版\")"],
+      ["Button(\"Apply\") { Task { await session.commitGradient() } }", "Button(\"应用\") { Task { await session.commitGradient() } }"]
+    ],
+    "UI/TransformInspector.swift": [
+      ["Picker(\"Sampling\", selection:", "Picker(\"采样\", selection:"],
+      ["Button(\"Apply\") { session.commitTransform() }", "Button(\"应用\") { session.commitTransform() }"]
+    ],
+    "UI/ShapeControls.swift": [
+      ["Text(\"Shape\").font(ToolHeaderStyle.titleFont)", "Text(\"形状\").font(ToolHeaderStyle.titleFont)"],
+      ["Picker(\"Shape\", selection: Binding(get: { session.shapeKind }", "Picker(\"形状\", selection: Binding(get: { session.shapeKind }"],
+      ["Text(\"Width\")", "Text(\"线宽\")"],
+      ["TextField(\"Width\", value: Binding(get: { session.shapeLineWidth }", "TextField(\"线宽\", value: Binding(get: { session.shapeLineWidth }"],
+      ["Text(\"Radius\")", "Text(\"圆角\")"],
+      ["TextField(\"Radius\", value: Binding(get: { session.shapeCornerRadius }", "TextField(\"圆角\", value: Binding(get: { session.shapeCornerRadius }"],
+      ["Text(\"Fill\")", "Text(\"填充\")"]
+    ],
+    "UI/TypeControls.swift": [
+      ["Text(\"Type\").font(ToolHeaderStyle.titleFont)", "Text(\"文字\").font(ToolHeaderStyle.titleFont)"],
+      ["TextField(\"Size\", value: number(\\.fontSize)", "TextField(\"字号\", value: number(\\.fontSize)"],
+      ["Text(\"Tracking\")", "Text(\"字距\")"],
+      ["TextField(\"Tracking\", value: number(\\.tracking)", "TextField(\"字距\", value: number(\\.tracking)"],
+      ["Text(\"Leading\")", "Text(\"行距\")"],
+      ["TextField(\"Leading\", text: Binding(get: {", "TextField(\"行距\", text: Binding(get: {"],
+      ["prompt: Text(\"Auto\")", "prompt: Text(\"自动\")"],
+      ["Button(\"Done\") { _ = session.finishText() }", "Button(\"完成\") { _ = session.finishText() }"]
+    ],
+    "UI/LassoControls.swift": [
+      ["Picker(\"Sample Size\", selection: $session.wandSettings.sampleSize)", "Picker(\"取样大小\", selection: $session.wandSettings.sampleSize)"]
+    ],
+    "UI/LayerAppearanceControls.swift": [
+      ["Text(\"Blend\").font(.caption)", "Text(\"混合\").font(.caption)"],
+      ["Text(\"Opacity\").font(.caption)", "Text(\"不透明度\").font(.caption)"],
+      ["TextField(\"Opacity percent\", text: $percentage)", "TextField(\"不透明度百分比\", text: $percentage)"]
+    ],
+    "UI/ColorPaletteControls.swift": [
+      ["let label = background ? \"Background color\" : \"Foreground color\"", "let label = background ? \"背景色\" : \"前景色\""]
+    ],
+    "UI/FilterSheet.swift": [
+      ["control(\"Shift Edge\", \\.shiftEdge", "control(\"移动边缘\", \\.shiftEdge"],
+      ["control(\"Remove Distortion\", \\.distortion", "control(\"移去扭曲\", \\.distortion"]
+    ],
+    "UI/EffectsSheet.swift": [
+      ["Text(\"Stroke\").font(.headline)", "Text(\"描边\").font(.headline)"],
+      ["Text(\"Outside\").tag(false)", "Text(\"外部\").tag(false)"],
+      ["Text(\"Inside\").tag(true)", "Text(\"内部\").tag(true)"],
+      ["Text(\"Color\").frame(width: 64, alignment: .leading)", "Text(\"颜色\").frame(width: 64, alignment: .leading)"],
+      ["slider(\"Size\", value:", "slider(\"大小\", value:"],
+      ["slider(\"Opacity\", value:", "slider(\"不透明度\", value:"],
+      ["slider(\"Angle\", value:", "slider(\"角度\", value:"],
+      ["slider(\"Distance\", value:", "slider(\"距离\", value:"],
+      ["slider(\"Blur\", value:", "slider(\"模糊\", value:"],
+      ["Text(\"Drop Shadow\").font(.headline)", "Text(\"投影\").font(.headline)"],
+      ["Text(\"Color Overlay\").font(.headline)", "Text(\"颜色叠加\").font(.headline)"],
+      ["Text(\"Inner Shadow\").font(.headline)", "Text(\"内阴影\").font(.headline)"]
+    ],
+    "UI/KeyboardShortcuts.swift": [
+      ["panel.show(title: \"Keyboard Shortcuts\", content:", "panel.show(title: \"键盘快捷键\", content:"],
+      ["else { return \"Choose a single key with optional modifiers.\" }", "else { return \"请选择单个按键，并可搭配修饰键。\" }"],
+      ["return \"Text-editing shortcuts need Command, Option, or Control so they do not replace normal typing.\"", "return \"文本编辑快捷键需要 Command、Option 或 Control，以免替换正常输入。\""],
+      ["return \"\\(chord.label) is reserved by macOS.\"", "return \"\\(chord.label) 已被 macOS 保留。\""],
+      ["return \"\\(chord.label) is assigned to both \\(other) and \\(definition.title).\"", "return \"\\(chord.label) 同时分配给了「\\(other)」和「\\(definition.title)」。\""],
+      ["button.title = recording ? \"Press keys…\" : chord.label", "button.title = recording ? \"按下按键…\" : chord.label"]
+    ],
+    "UI/ProjectTabs.swift": [
+      [".help(\"Close \\(tab.title)\")", ".help(\"关闭 \\(tab.title)\")"],
+      [".accessibilityLabel(\"Close \\(tab.title)\")", ".accessibilityLabel(\"关闭 \\(tab.title)\")"],
+      [".help(targeted ? \"Add to \\(tab.title)\" : tab.title)", ".help(targeted ? \"添加到 \\(tab.title)\" : tab.title)"]
+    ],
+    "UI/NativeLayerList.swift": [
+      ["thumbnail.toolTip = \"Select layer; Cmd-click to select its pixels (Cmd-Shift adds, Cmd-Option subtracts)\"", "thumbnail.toolTip = \"选择图层；按住 Cmd 点击选择其像素（Cmd-Shift 添加，Cmd-Option 减去）\""],
+      ["[(\"Rename…\", #selector(rename)), (\"Hide/Show Layer\", #selector(toggleVisibility)),", "[(\"重命名…\", #selector(rename)), (\"显示/隐藏图层\", #selector(toggleVisibility)),"],
+      ["(\"Add White Mask\", #selector(addWhiteMask)), (\"Add Black Mask\", #selector(addBlackMask)),", "(\"添加白色蒙版\", #selector(addWhiteMask)), (\"添加黑色蒙版\", #selector(addBlackMask)),"],
+      ["(\"Enable/Disable Mask\", #selector(toggleMask)), (\"Delete Mask\", #selector(deleteMask)), (\"释放剪贴蒙版\", #selector(removeLiveMask)),", "(\"启用/禁用蒙版\", #selector(toggleMask)), (\"删除蒙版\", #selector(deleteMask)), (\"释放剪贴蒙版\", #selector(removeLiveMask)),"],
+      ["(\"移出文件夹\", #selector(moveOut)), (\"Delete Layer / Folder\", #selector(deleteLayer))]", "(\"移出文件夹\", #selector(moveOut)), (\"删除图层/文件夹\", #selector(deleteLayer))]"],
+      ["linkButton.toolTip = layer.mask?.isLinked == false ? \"Link layer and mask so they move together\"", "linkButton.toolTip = layer.mask?.isLinked == false ? \"链接图层与蒙版，使其一起移动\""],
+      [": \"Unlink layer and mask to move or transform them separately\"", ": \"取消链接，以便分别移动或变换图层与蒙版\""],
+      ["thumbnail.toolTip = editableText ? \"Editable text layer\" : \"Select image pixels\"", "thumbnail.toolTip = editableText ? \"可编辑文字图层\" : \"选择图像像素\""],
+      ["\"Missing source\"", "\"缺失源图层\""],
+      ["layer.isGroup ? \"Folder\"", "layer.isGroup ? \"文件夹\""],
+      ["toolTip = \"Click to select; double-click to edit; Option-drag to copy \" + kind.rawValue.lowercased()", "toolTip = \"点击选择；双击编辑；Option 拖动拷贝\" + kind.displayName"]
+    ],
+    "CompositorApp.swift": [
+      ["Button(session.selectedEffect != nil ? \"Delete \" + session.selectedEffect!.kind.rawValue : session.isMaskSelected && session.activeLayer?.mask != nil ? \"Delete Layer Mask\" : session.selectedLayerIDs.count > 1 ? \"Delete Layers\" : \"Delete Layer\")", "Button(session.selectedEffect != nil ? \"删除\" + session.selectedEffect!.kind.displayName : session.isMaskSelected && session.activeLayer?.mask != nil ? \"删除图层蒙版\" : session.selectedLayerIDs.count > 1 ? \"删除图层\" : \"删除图层\")"]
+    ],
+    "ContentView.swift": [
+      ["Button(\"OK\", role: .cancel) { session.importError = nil }", "Button(\"好\", role: .cancel) { session.importError = nil }"]
+    ],
+    "Document/ObjectSelection.swift": [
+      ["case .unsupported: \"Object Selection requires macOS 14 or later.\"", "case .unsupported: \"对象选择需要 macOS 14 或更高版本。\""],
+      ["case .render: \"The object mask could not be rendered.\"", "case .render: \"无法渲染对象蒙版。\""],
+      ["name: \"Object Selection\")", "name: \"对象选择\")"],
+      ["mode: mode, name: \"Object Selection\")", "mode: mode, name: \"对象选择\")"]
+    ],
+    "Document/Selection.swift": [
+      ["name: draft.kind == .freehand ? \"Lasso\" : draft.kind == .polygonal ? \"Polygonal Lasso\"", "name: draft.kind == .freehand ? \"套索\" : draft.kind == .polygonal ? \"多边形套索\""],
+      [": draft.kind == .ellipse ? \"Elliptical Marquee\" : \"Rectangular Marquee\")", ": draft.kind == .ellipse ? \"椭圆选框\" : \"矩形选框\")"],
+      ["name: \"Feather Selection\")", "name: \"羽化选区\")"]
+    ],
+    "Document/Gradient.swift": [
+      ["name: edit.raster.isMask ? \"Gradient Mask\" : \"Gradient\")", "name: edit.raster.isMask ? \"渐变蒙版\" : \"渐变\")"]
+    ],
+    "Document/LayerEffects.swift": [
+      ["name: String = \"Layer Effects\")", "name: String = \"图层效果\")"]
+    ],
+    "Document/FloatingSelection.swift": [
+      ["name: \"Floating Selection\"),", "name: \"浮动选区\"),"],
+      ["floating.name = \"Floating Selection\"", "floating.name = \"浮动选区\""]
+    ],
+    "Document/MaskTracing.swift": [
+      ["name: \"Load Mask Selection\")", "name: \"载入蒙版选区\")"],
+      ["name: \"Load Layer Selection\")", "name: \"载入图层选区\")"]
+    ],
+    "Document/SubjectRemoval.swift": [
+      ["\"No foreground subject was detected in this layer. Try an image with a more distinct subject.\"", "\"未在此图层中检测到前景主体。请尝试主体更明显的图像。\""],
+      ["name: \"Select Subject\")", "name: \"选择主体\")"]
+    ],
+    "IO/CanvasResizer.swift": [
+      ["name: \"Canvas Extension\")", "name: \"画布扩展\")"],
+      ["name: \"Canvas Extension\", isVisible: true,", "name: \"画布扩展\", isVisible: true,"]
+    ],
+    "Document/AdjustmentEditing.swift": [
+      ["name: \"Adjustment input\")", "name: \"调整输入\")"]
+    ],
+    "Document/ColorPalette.swift": [
+      ["case .text: return \"Color Picker (Text Color)\"", "case .text: return \"拾色器（文本颜色）\""]
+    ],
+    "Document/ContentFill.swift": [
+      ["\"Not enough unselected, opaque image pixels to synthesize a fill. Use a smaller selection with some surrounding image.\"", "\"未选中的不透明像素不足，无法合成填充。请使用更小的选区，并保留周围图像。\""]
+    ],
+    "IO/ImageExporter.swift": [
+      ["case .tooLarge: \"Image export supports canvases up to 100 megapixels and 30,000 pixels per side.\"", "case .tooLarge: \"图像导出支持最大 1 亿像素、每边不超过 30,000 像素的画布。\""],
+      ["case .render: \"The canvas could not be rendered. Try a smaller canvas.\"", "case .render: \"无法渲染画布。请尝试更小的画布。\""],
+      ["case .encode: \"The image could not be encoded.\"", "case .encode: \"无法编码该图像。\""]
+    ],
+    "Document/MagicWand.swift": [
+      ["case .memory: \"There isn’t enough memory to make that selection.\"", "case .memory: \"内存不足，无法创建该选区。\""]
+    ],
+    "Document/ProjectWorkspace.swift": [
+      ["\"The copied layers exceed this project’s 100-megapixel limit.\"", "\"拷贝的图层超出了本项目 1 亿像素的限制。\""]
+    ],
+    "Document/ShapeTool.swift": [
+      ["\"That shape is too large. A shape can cover up to 100 megapixels.\"", "\"形状过大。单个形状最多覆盖 1 亿像素。\""]
+    ],
+    "Document/SmudgeLiquify.swift": [
+      ["\"Smudge and Liquify work on a layer's pixels, not its mask.\"", "\"涂抹与液化作用于图层像素，而非蒙版。\""]
+    ],
+    "Document/TypeTool.swift": [
+      ["\"That text box exceeds the 30,000-pixel or 100-megapixel limit.\"", "\"该文本框超出 30,000 像素或 1 亿像素限制。\""]
+    ]
+  },
+  "global": []
+}

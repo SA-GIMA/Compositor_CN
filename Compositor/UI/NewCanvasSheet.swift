@@ -17,21 +17,21 @@ struct NewCanvasSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("New canvas").font(.title2.weight(.semibold))
-                Text("A blank space for your next composition.").foregroundStyle(.secondary)
+                Text("新建画布").font(.title2.weight(.semibold))
+                Text("为下一次创作准备的空白画布。").foregroundStyle(.secondary)
             }
             HStack(spacing: 16) {
                 dimension("Width", text: $width, field: .width)
                 Image(systemName: "multiply").foregroundStyle(.tertiary).padding(.top, 20)
                 dimension("Height", text: $height, field: .height)
             }
-            Text(valid ? "Transparent canvas · sRGB" : "Enter whole numbers from 1 to 30,000 pixels.")
+            Text(valid ? "透明画布 · sRGB" : "请输入 1 到 30,000 像素的整数。")
                 .font(.callout).foregroundStyle(valid ? Color.secondary : Color.orange)
             HStack(spacing: 10) {
-                Button("Open project") { onOpen?() }.buttonStyle(.bordered)
-                Button("Import image") { session.showsImporter = true }.buttonStyle(.bordered)
+                Button("打开项目") { onOpen?() }.buttonStyle(.bordered)
+                Button("导入图像") { session.showsImporter = true }.buttonStyle(.bordered)
                 Spacer()
-                Button("Create canvas") {
+                Button("创建画布") {
                     guard let w = CanvasDocument.validDimension(width),
                           let h = CanvasDocument.validDimension(height) else { return }
                     if let onCreate { onCreate(w, h) }

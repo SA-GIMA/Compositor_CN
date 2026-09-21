@@ -225,7 +225,7 @@ extension EditorSession {
         do {
             let asset = try await Task.detached(priority: .userInitiated) {
                 let image = try LevelsFilter.run(job)
-                return ImportedImage(image: image, thumbnail: try PixelAdjust.thumbnail(of: image), name: "Levels")
+                return ImportedImage(image: image, thumbnail: try PixelAdjust.thumbnail(of: image), name: "色阶")
             }.value
             guard let index = document?.layers.firstIndex(where: { $0.id == edit.layerID }),
                   let current = document?.layers[index], current.asset?.image === edit.original.image,

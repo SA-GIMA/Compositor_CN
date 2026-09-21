@@ -229,7 +229,7 @@ final class ProjectController {
         guard session.isModified, session.document != nil else { return true }
         let alert = NSAlert()
         alert.messageText = "Save changes to \(session.projectURL?.lastPathComponent ?? "未命名")?"
-        alert.informativeText = "Your changes will be lost if you don’t save them."
+        alert.informativeText = "如果不存储，所做的更改将会丢失。"
         alert.addButton(withTitle: "存储")
         alert.addButton(withTitle: "Cancel")
         alert.addButton(withTitle: "不存储")

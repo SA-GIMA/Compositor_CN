@@ -7,7 +7,7 @@ struct CurvesControls: View {
     private var points: [CurvePoint] { settings.channels[settings.channel.index] }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Channel", selection: $settings.channel) {
+            Picker("通道", selection: $settings.channel) {
                 ForEach(LevelsChannel.allCases, id: \.self) { Text($0.displayName).tag($0) }
             }.onChange(of: settings.channel) { _, _ in selected = nil; dragging = nil }
             Canvas { context, size in
@@ -53,17 +53,17 @@ struct CurvesControls: View {
                     settings.channels[settings.channel.index] = p
                 }.onEnded { _ in dragging = nil })
             } }
-            Text("Click to add a point. Drag to adjust.").font(.caption).foregroundStyle(.secondary)
+            Text("点击添加控制点，拖动进行调整。").font(.caption).foregroundStyle(.secondary)
             HStack {
                 if let selected, points.indices.contains(selected) {
                     Text("Input \(Int(points[selected].x)) · Output \(Int(points[selected].y))").monospacedDigit()
                 }
                 Spacer()
-                Button("Remove point") {
+                Button("删除控制点") {
                     if let selected, selected > 0, selected < points.count-1 { settings.channels[settings.channel.index].remove(at: selected); self.selected = nil }
                 }.disabled(selected == nil || selected == 0 || selected == points.count-1)
             }
-            Button("Reset curve") { settings.channels[settings.channel.index] = [CurvePoint(x: 0,y: 0), CurvePoint(x: 255,y: 255)]; selected = nil }
+            Button("重置曲线") { settings.channels[settings.channel.index] = [CurvePoint(x: 0,y: 0), CurvePoint(x: 255,y: 255)]; selected = nil }
         }
     }
 }

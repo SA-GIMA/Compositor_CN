@@ -213,7 +213,7 @@ extension EditorSession {
             effects.innerShadow = InnerShadowEffect()
         default: break
         }
-        setEffects(effects, on: id, name: "Add " + kind.rawValue)
+        setEffects(effects, on: id, name: "添加" + kind.displayName)
         selectEffect(kind, on: id, editing: true)
         effectsEditingOriginal = original
     }
@@ -246,14 +246,14 @@ extension EditorSession {
             case .colorOverlay: effects.colorOverlay = original.colorOverlay
             case .innerShadow: effects.innerShadow = original.innerShadow
             }
-            setEffects(effects, on: editing.layerID, name: "Cancel " + editing.kind.rawValue)
+            setEffects(effects, on: editing.layerID, name: "取消" + editing.kind.displayName)
         }
         effectsEditing = nil
         effectsEditingOriginal = nil
         if selectedEffect == nil { effectSelection = nil }
     }
 
-    func setEffects(_ effects: LayerEffects, on id: UUID? = nil, name: String = "Layer Effects") {
+    func setEffects(_ effects: LayerEffects, on id: UUID? = nil, name: String = "图层效果") {
         guard canEditLayers, effects.isValid,
               let index = document?.layers.firstIndex(where: { $0.id == (id ?? activeLayerID) }),
               document?.layers[index].isGroup == false, document?.layers[index].asset != nil,
@@ -271,7 +271,7 @@ extension EditorSession {
               layer.effects?.contains(editing.kind) == true else { return }
         var effects = layer.effects ?? LayerEffects()
         change(&effects)
-        setEffects(effects, on: layer.id, name: "Edit " + editing.kind.rawValue)
+        setEffects(effects, on: layer.id, name: "编辑" + editing.kind.displayName)
     }
 
     func canCopyEffect(_ kind: LayerEffectKind, from source: UUID, to target: UUID) -> Bool {
@@ -296,7 +296,7 @@ extension EditorSession {
         case .colorOverlay: effects.colorOverlay = original.colorOverlay
         case .innerShadow: effects.innerShadow = original.innerShadow
         }
-        setEffects(effects, on: target, name: "Copy " + kind.rawValue)
+        setEffects(effects, on: target, name: "拷贝" + kind.displayName)
         selectEffect(kind, on: target)
     }
 
@@ -316,7 +316,7 @@ extension EditorSession {
             effectsEditingOriginal = nil
         }
         effects.remove(selectedEffect.kind)
-        setEffects(effects, on: selectedEffect.layerID, name: "Remove " + selectedEffect.kind.rawValue)
+        setEffects(effects, on: selectedEffect.layerID, name: "移除" + selectedEffect.kind.displayName)
         effectSelection = nil
     }
 }

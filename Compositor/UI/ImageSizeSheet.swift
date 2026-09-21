@@ -8,7 +8,7 @@ struct ImageSizeSheet: View {
     @State private var resolution: Double
     @State private var locked = true
     @State private var resample = true
-    @State private var unit = "Pixels"
+    @State private var unit = "像素"
     @State private var sampling: LayerSampling = .high
     private let units = ["像素", "百分比", "英寸", "厘米"]
 
@@ -27,9 +27,9 @@ struct ImageSizeSheet: View {
     }
     private func display(_ pixels: Double, original: Int) -> Double {
         switch unit {
-        case "Percent": return pixels / Double(original) * 100
-        case "Inches": return pixels / resolution
-        case "Centimeters": return pixels / resolution * 2.54
+        case "百分比": return pixels / Double(original) * 100
+        case "英寸": return pixels / resolution
+        case "厘米": return pixels / resolution * 2.54
         default: return pixels
         }
     }
@@ -37,14 +37,14 @@ struct ImageSizeSheet: View {
         Binding(get: { display(isWidth ? width : height, original: isWidth ? document.width : document.height) }, set: { value in
             guard value.isFinite, value > 0 else { return }
             if !resample {
-                resolution = (isWidth ? width : height) / value * (unit == "Centimeters" ? 2.54 : 1)
+                resolution = (isWidth ? width : height) / value * (unit == "厘米" ? 2.54 : 1)
                 return
             }
             let pixels: Double
             switch unit {
-            case "Percent": pixels = value / 100 * Double(isWidth ? document.width : document.height)
-            case "Inches": pixels = value * resolution
-            case "Centimeters": pixels = value / 2.54 * resolution
+            case "百分比": pixels = value / 100 * Double(isWidth ? document.width : document.height)
+            case "英寸": pixels = value * resolution
+            case "厘米": pixels = value / 2.54 * resolution
             default: pixels = value
             }
             if isWidth {
@@ -61,50 +61,50 @@ struct ImageSizeSheet: View {
     @ViewBuilder private var sheet: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("图像大小").font(.title2.bold())
-            Text("Current: \(document.width) × \(document.height) pixels").foregroundStyle(.secondary)
-            Picker("Units", selection: $unit) {
-                ForEach(units.filter { resample || ($0 != "Pixels" && $0 != "Percent") }, id: \.self) { Text($0) }
+            Text("当前：\(document.width) × \(document.height) 像素").foregroundStyle(.secondary)
+            Picker("单位", selection: $unit) {
+                ForEach(units.filter { resample || ($0 != "像素" && $0 != "百分比") }, id: \.self) { Text($0) }
             }
             HStack {
-                Text("Width").frame(width: 75, alignment: .leading)
-                TextField("Width", value: dimension(isWidth: true), format: .number.precision(.fractionLength(0...3)))
+                Text("宽度").frame(width: 75, alignment: .leading)
+                TextField("宽度", value: dimension(isWidth: true), format: .number.precision(.fractionLength(0...3)))
             }
             HStack {
-                Text("Height").frame(width: 75, alignment: .leading)
-                TextField("Height", value: dimension(isWidth: false), format: .number.precision(.fractionLength(0...3)))
+                Text("高度").frame(width: 75, alignment: .leading)
+                TextField("高度", value: dimension(isWidth: false), format: .number.precision(.fractionLength(0...3)))
             }
-            Toggle("Lock aspect ratio", isOn: $locked).disabled(!resample)
+            Toggle("锁定长宽比", isOn: $locked).disabled(!resample)
             HStack {
-                Text("Resolution")
-                TextField("Resolution", value: $resolution, format: .number.precision(.fractionLength(0...3)))
+                Text("分辨率")
+                TextField("分辨率", value: $resolution, format: .number.precision(.fractionLength(0...3)))
                     .onChange(of: resolution) { old, new in
-                        if resample, unit == "Inches" || unit == "Centimeters",
+                        if resample, unit == "英寸" || unit == "厘米",
                            old > 0, new > 0, new.isFinite {
                             width *= new / old
                             height *= new / old
                         }
                     }
-                Text("pixels/inch").foregroundStyle(.secondary)
+                Text("像素/英寸").foregroundStyle(.secondary)
             }
-            Toggle("Resample", isOn: $resample).onChange(of: resample) { _, enabled in
+            Toggle("重定像素", isOn: $resample).onChange(of: resample) { _, enabled in
                 if !enabled {
                     width = Double(document.width)
                     height = Double(document.height)
                     locked = true
-                    if unit == "Pixels" || unit == "Percent" { unit = "Inches" }
+                    if unit == "像素" || unit == "百分比" { unit = "英寸" }
                 }
             }
             if resample {
-                Picker("Sampling", selection: $sampling) {
+                Picker("采样", selection: $sampling) {
                     ForEach(LayerSampling.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                Text("Resizes layer pixels and applies existing transforms. Undo restores the originals.")
+                Text("调整图层像素尺寸并应用已有变换。撤销可恢复原始像素。")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Text("Only print dimensions and resolution change. Pixels stay unchanged.")
+                Text("仅打印尺寸与分辨率会变化。像素保持不变。")
                     .font(.callout).foregroundStyle(.secondary)
             }
-            Text(valid ? "Result: \(Int(width.rounded())) × \(Int(height.rounded())) pixels" : "Use 1–30,000 pixels per side, up to 100 megapixels, and 1–9,600 pixels/inch.")
+            Text(valid ? "结果：\(Int(width.rounded())) × \(Int(height.rounded())) 像素" : "每边 1–30,000 像素，总计不超过 1 亿像素；分辨率为 1–9,600 像素/英寸。")
                 .foregroundStyle(valid ? Color.secondary : Color.orange).font(.callout)
             HStack {
                 Button("取消") { finish(nil) }.configuredNativeShortcut(.escape)

@@ -1,0 +1,35 @@
+{
+  "description": "Additional English→Chinese pairs for upstream drift. Keyed by path relative to Compositor/.",
+  "files": {
+    "UI/CompositorApp.swift": [],
+    "CompositorApp.swift": [
+      ["Button(\"Redo\")", "Button(\"重做\")"],
+      ["\"Undo \\(session.history.undoName)\"", "\"撤销\\(session.history.undoName)\""],
+      ["\"Redo \\(session.history.redoName)\"", "\"重做\\(session.history.redoName)\""]
+    ],
+    "UI/BrushControls.swift": [
+      ["Text(\"Size\")", "Text(\"大小\")"],
+      ["Text(\"Hardness\")", "Text(\"硬度\")"],
+      ["\"This Layer\"", "\"当前图层\""],
+      ["\"All Layers\"", "\"所有图层\""]
+    ],
+    "UI/FilterSheet.swift": [
+      ["control(\"Radius\"", "control(\"半径\""],
+      ["control(\"Angle\"", "control(\"角度\""],
+      ["control(\"Distance\"", "control(\"距离\""],
+      ["control(\"Amount\"", "control(\"数量\""]
+    ],
+    "UI/ImageSizeSheet.swift": [
+      ["[\"Pixels\", \"Percent\", \"Inches\", \"Centimeters\"]", "[\"像素\", \"百分比\", \"英寸\", \"厘米\"]"],
+      ["Text(\"Image Size\")", "Text(\"图像大小\")"],
+      ["Button(\"Resize\")", "Button(\"调整大小\")"]
+    ],
+    "UI/JPEGExportSheet.swift": [
+      ["Text(\"Export JPEG\")", "Text(\"导出 JPEG\")"],
+      ["Text(\"Quality\")", "Text(\"质量\")"]
+    ]
+  },
+  "global": {
+    "notes": "Extend here when new upstream UI English appears. Prefer exact source snippets."
+  }
+}

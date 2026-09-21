@@ -3,7 +3,7 @@ import SwiftUI
 struct ImageLayer: Identifiable, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.name == rhs.name && lhs.isVisible == rhs.isVisible && lhs.transform == rhs.transform
-            && lhs.asset?.image === rhs.asset?.image && lhs.parentID == rhs.parentID && lhs.isGroup == rhs.isGroup && lhs.opacity == rhs.opacity && lhs.blendMode == rhs.blendMode && lhs.mask == rhs.mask && lhs.maskSourceID == rhs.maskSourceID && lhs.adjustment == rhs.adjustment && lhs.shape == rhs.shape
+            && lhs.asset?.image === rhs.asset?.image && lhs.parentID == rhs.parentID && lhs.isGroup == rhs.isGroup && lhs.opacity == rhs.opacity && lhs.blendMode == rhs.blendMode && lhs.mask == rhs.mask && lhs.maskSourceID == rhs.maskSourceID && lhs.adjustment == rhs.adjustment && lhs.shape == rhs.shape && lhs.text == rhs.text && lhs.effects == rhs.effects
     }
     let id: UUID
     var asset: ImportedImage?
@@ -20,6 +20,9 @@ struct ImageLayer: Identifiable, Equatable {
     var adjustment: LayerAdjustment?
     /// Set on layers the Shape tool made; see `liveShape`.
     var shape: LayerShape?
+    /// A stroke and drop shadow drawn around the layer, kept apart from its pixels.
+    var effects: LayerEffects?
+    var text: LayerText?
     var size: CGSize { transform.size }
 
     init(asset: ImportedImage, origin: CGPoint) {
@@ -36,7 +39,7 @@ struct ImageLayer: Identifiable, Equatable {
         self.name = name
     }
 
-    init(id: UUID, asset: ImportedImage?, name: String, isVisible: Bool, transform: LayerTransform, parentID: UUID? = nil, isGroup: Bool = false, opacity: Double = 1, blendMode: LayerBlendMode = .normal, mask: LayerMask? = nil, maskSourceID: UUID? = nil, adjustment: LayerAdjustment? = nil, shape: LayerShape? = nil) {
+    init(id: UUID, asset: ImportedImage?, name: String, isVisible: Bool, transform: LayerTransform, parentID: UUID? = nil, isGroup: Bool = false, opacity: Double = 1, blendMode: LayerBlendMode = .normal, mask: LayerMask? = nil, maskSourceID: UUID? = nil, adjustment: LayerAdjustment? = nil, shape: LayerShape? = nil, effects: LayerEffects? = nil, text: LayerText? = nil) {
         self.id = id
         self.asset = asset
         self.name = name
@@ -50,6 +53,8 @@ struct ImageLayer: Identifiable, Equatable {
         self.maskSourceID = maskSourceID
         self.adjustment = adjustment
         self.shape = shape
+        self.effects = effects
+        self.text = text
     }
 }
 
@@ -59,15 +64,18 @@ struct CanvasDocument: Equatable {
     let height: Int
     var resolution: Double = 72
     var layers: [ImageLayer] = [] // Bottom to top.
+    /// User-placed alignment lines. Saved with the project; undo covers them.
+    var guides: [CanvasGuide] = []
     /// Part of the document so undo/redo covers selection changes. Not saved to disk.
     var selection: DocumentSelection?
     var size: CGSize { CGSize(width: width, height: height) }
-    init(id: UUID = UUID(), width: Int, height: Int, layers: [ImageLayer] = [], resolution: Double = 72) {
+    init(id: UUID = UUID(), width: Int, height: Int, layers: [ImageLayer] = [], resolution: Double = 72, guides: [CanvasGuide] = []) {
         self.id = id
         self.width = width
         self.height = height
         self.layers = layers
         self.resolution = resolution
+        self.guides = guides
     }
 
     // Geometry limit; raster memory limits will be established with image import.
@@ -79,15 +87,15 @@ struct CanvasDocument: Equatable {
 }
 
 enum NavigationTool: String, CaseIterable {
-    case move, marquee, lasso, wand, crop, brush, spotHealing, cloneStamp, blur, gradient, shape, eyedropper, hand, zoom
+    case move, marquee, lasso, wand, crop, brush, spotHealing, cloneStamp, blur, gradient, shape, type, eyedropper, hand, zoom
     /// No tool (A): nothing in the tool rail is selected and canvas clicks do nothing.
     case idle
     /// Tools that paint with the brush tip, sharing its size, hardness, opacity, and keys.
     var isBrushTool: Bool { self == .brush || self == .spotHealing || self == .cloneStamp || self == .blur }
     /// Tools that draw and edit selections, sharing modifiers, moving, and nudging.
     var isSelectionTool: Bool { self == .marquee || self == .lasso || self == .wand }
-    var symbol: String { self == .eyedropper ? "eyedropper" : self == .marquee ? "rectangle.dashed" : self == .lasso ? "lasso" : self == .wand ? "wand.and.stars" : self == .brush ? "paintbrush.pointed" : self == .spotHealing ? "bandage" : self == .cloneStamp ? "seal" : self == .blur ? "drop" : self == .gradient ? "square.bottomhalf.filled" : self == .shape ? "square.on.circle" : self == .crop ? "crop" : self == .move ? "arrow.up.left.and.arrow.down.right" : self == .hand ? "hand.draw" : "magnifyingglass" }
-    var label: String { self == .eyedropper ? "吸管（I）" : self == .marquee ? "选框（M）" : self == .lasso ? "套索（L）" : self == .wand ? "魔棒（W）" : self == .brush ? "画笔（B）· 橡皮擦（E）" : self == .spotHealing ? "污点修复画笔（J）" : self == .cloneStamp ? "仿制图章（S）· Option 点击取样" : self == .blur ? "涂抹（R）" : self == .gradient ? "渐变（G）" : self == .shape ? "形状（U）· Shift-U 切换矩形/椭圆" : self == .crop ? "裁剪（C）" : self == .move ? "移动/变换（V）" : self == .hand ? "抓手（H）" : "缩放（Z）" }
+    var symbol: String { self == .type ? "textformat" : self == .eyedropper ? "eyedropper" : self == .marquee ? "rectangle.dashed" : self == .lasso ? "lasso" : self == .wand ? "wand.and.stars" : self == .brush ? "paintbrush.pointed" : self == .spotHealing ? "bandage" : self == .cloneStamp ? "seal" : self == .blur ? "drop" : self == .gradient ? "square.bottomhalf.filled" : self == .shape ? "square.on.circle" : self == .crop ? "crop" : self == .move ? "arrow.up.left.and.arrow.down.right" : self == .hand ? "hand.draw" : "magnifyingglass" }
+    var label: String { self == .eyedropper ? "吸管（I）" : self == .marquee ? "选框（M）" : self == .lasso ? "套索（L）" : self == .wand ? "魔棒（W）" : self == .brush ? "画笔（B）· 橡皮擦（E）" : self == .spotHealing ? "污点修复画笔（J）" : self == .cloneStamp ? "仿制图章（S）· Option 点击取样" : self == .blur ? "涂抹（R）" : self == .gradient ? "渐变（G）" : self == .shape ? "形状（U）· Shift-U 切换矩形/椭圆/直线" : self == .crop ? "裁剪（C）" : self == .move ? "移动/变换（V）" : self == .hand ? "抓手（H）" : "缩放（Z）" }
 }
 
 @Observable
@@ -98,6 +106,11 @@ final class EditorSession {
     var showsSampleRing = true
     var adjustmentOriginal: LayerAdjustment?
     var adjustmentEditingID: UUID? { didSet { resumeFileRequests() } }
+    /// The layer whose effects panel is open.
+    var effectsEditing: LayerEffectSelection?
+    var effectsEditingOriginal: LayerEffects?
+    var effectSelection: LayerEffectSelection?
+    @ObservationIgnored var effectsPreviews = EffectsPreviewCache()
     var projectURL: URL?
     /// Blocks overlapping edits immediately. Not observed by the UI: controls only dim via
     /// `showsBusy`, after an operation has run long enough to be worth showing, so quick
@@ -136,7 +149,7 @@ final class EditorSession {
     private var fileRequestWaiters: [CheckedContinuation<Void, Never>] = []
     var canStartProjectOperation: Bool {
         _ = showsBusy // Re-evaluate in the UI when a long operation starts or ends.
-        return !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && adjustmentEditingID == nil
+        return selectionAmountOperation == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && adjustmentEditingID == nil
     }
     func waitForFileRequest() async {
         while !canStartProjectOperation {
@@ -162,8 +175,15 @@ final class EditorSession {
     var cropError: String?
     var transformEdit: TransformEdit?
     @ObservationIgnored var distortPreviewCache: [UUID: DistortPreviewCache] = [:]
+    @ObservationIgnored var distortEffectsCache: [UUID: DistortEffectsCache] = [:]
     /// Document positions a move has just snapped to, drawn as guides while it lasts.
     @ObservationIgnored var snapGuides: (xs: [CGFloat], ys: [CGFloat]) = ([], [])
+    var snappingEnabled = true {
+        didSet {
+            if !snappingEnabled { snapGuides = ([], []) }
+            refreshCanvasPreview?()
+        }
+    }
     /// Where the last brush stroke ended, so a Shift-click paints a straight line on from it.
     @ObservationIgnored var lastBrushPoint: (point: CGPoint, layerID: UUID, mask: Bool)?
     @ObservationIgnored var maskDistortPreviewCache: MaskDistortPreviewCache?
@@ -175,7 +195,8 @@ final class EditorSession {
     /// The Move tool's transform box and handles (⌘H). Hidden, a drag anywhere just moves the layer;
     /// a pending ⌘T transform still shows its box.
     var showsTransformControls = true
-    @ObservationIgnored var transformDuplicate: (copy: UUID, source: UUID)?
+    /// The copies an Option-drag made, and what was selected before it, so Escape can take them away again.
+    @ObservationIgnored var transformDuplicate: (copies: [UUID], source: Set<UUID>, primary: UUID?)?
     var brushSettings = BrushSettings() { didSet { refreshGradient() } }
     var spotHealingMode: SpotHealingMode = .contentAware
     var blurMode: BlurToolMode = .liquify
@@ -185,6 +206,8 @@ final class EditorSession {
     func symbol(for tool: NavigationTool) -> String {
         tool == .brush && brushMode == .erase ? "eraser" : tool.symbol
     }
+    /// The Magic tool's two modes: Wand selects by color, Object traces the object under the pointer (Tab).
+    var wandMode: WandMode = .wand
     /// Clone Stamp: the source Option-click set (document pixels), its options, and — once a
     /// stroke has started — the offset from brush to source that aligned strokes keep.
     var cloneSource: CGPoint?
@@ -203,9 +226,13 @@ final class EditorSession {
     var lassoDraft: LassoDraft?
     var lassoKind = LassoKind.freehand
     var marqueeKind = LassoKind.rectangle
+    var textDraft: TextDraft? { didSet { if oldValue != nil && textDraft == nil { resumeFileRequests() } } }
+    var textDefaults = LayerTextStyle()
     var shapeKind = ShapeKind.rectangle
     /// Corner radius in pixels for rectangles the Shape tool draws; 0 keeps the corners square.
     var shapeCornerRadius: Double = 0
+    /// A Line shape's thickness in document pixels.
+    var shapeLineWidth: Double = 4
     /// The shape being dragged out with the Shape tool, before it becomes a layer.
     var shapeDraft: ShapeDraft?
     var selectionModeChoice = SelectionMode.replace
@@ -228,8 +255,25 @@ final class EditorSession {
     var hueTargeting = false
     @ObservationIgnored var hueTargetDrag: HueTargetDrag?
     var selectionAntialiased = true
+    /// How far Feather softens the selection's edge each time it is applied, in document pixels.
+    var selectionAmountOperation: SelectionAmountOperation? { didSet { resumeFileRequests() } }
+    var selectionFeatherAmount = 2
     var wandSettings = WandSettings()
+    var objectSelectionSettings = ObjectSelectionSettings()
     var showsPixelGrid = true
+    /// Layout grid (View > Show > Grid). Off until turned on; independent of the 800% pixel grid.
+    var showsGrid = false
+    /// User guides. Hidden extras do not snap.
+    var showsGuides = true
+    var showsRulers = false
+    /// Master snap switch (View > Snap). On so today's layer/canvas snap keeps working.
+    var snapEnabled = true
+    var snapToGuides = true
+    var snapToGrid = false
+    var snapToLayers = true
+    var snapToDocumentBounds = true
+    var locksGuides = false
+    var guideDrag: GuideDrag?
     /// Pixels the Expand / Contract buttons grow or shrink the selection by.
     var selectionExpandAmount = 1
     var selectionContractAmount = 1
@@ -275,11 +319,14 @@ final class EditorSession {
         return LayerTransform(origin: CGPoint(x: minX, y: minY), size: CGSize(width: max(1, maxX - minX), height: max(1, maxY - minY)))
     }
     func selectLayer(_ id: UUID?) {
+        effectSelection = nil
+        if id != activeLayerID, !finishText() { return }
         guard brushStroke == nil, warpStroke == nil, levels == nil else { return }
         if id != activeLayerID { commitTransform(); resolveGradient() }
         activeLayerID = id
     }
     func selectTool(_ value: NavigationTool) {
+        if tool != value, !finishText() { return }
         guard !isProjectBusy, brushStroke == nil, warpStroke == nil, levels == nil else { return }
         if tool != value { commitTransform(); cancelCrop(); resolveGradient(); cancelLasso(); cancelShape() }
         let from = Self.tipFamily(tool), to = Self.tipFamily(value)
@@ -298,6 +345,29 @@ final class EditorSession {
             cropRect = CGRect(origin: .zero, size: document.size)
         }
     }
+    /// Tab steps the current tool through its own modes — the setting sitting at the left of its tool bar. Tools
+    /// without modes (Move, Crop, Type, Eyedropper, Hand, Zoom) ignore it.
+    func cycleToolMode() {
+        guard !isProjectBusy, brushStroke == nil, warpStroke == nil else { return }
+        func next<T: CaseIterable & Equatable>(_ value: T) -> T where T.AllCases.Index == Int {
+            let all = Array(T.allCases)
+            let index = all.firstIndex(of: value) ?? 0
+            return all[(index + 1) % all.count]
+        }
+        switch tool {
+        case .marquee: toggleMarqueeKind()
+        case .wand: wandMode = next(wandMode)
+        case .lasso: toggleLassoKind()
+        case .shape: toggleShapeKind()
+        case .brush: brushMode = next(brushMode)
+        case .blur: blurMode = next(blurMode)
+        case .spotHealing: spotHealingMode = next(spotHealingMode)
+        case .cloneStamp: cloneSettings.sampleAllLayers.toggle()
+        case .gradient: gradientSettings.shape = next(gradientSettings.shape)
+        default: break
+        }
+    }
+
     func beginTransform(persistent: Bool = true) {
         cancelCrop()
         guard transformEdit == nil, canTransform, let layer = activeLayer else { return }
@@ -318,15 +388,26 @@ final class EditorSession {
         guard value.isValid, transformEdit != nil else { return }
         transformEdit?.draft = value
     }
+    /// Option-drag duplicates selected roots with their descendants and drags the copies.
     func beginDuplicateTransform() {
-        // Option-drag duplicates a single layer; several selected, or a folder, just move.
-        guard transformDuplicate == nil, !transformsAsGroup, let source = activeLayerID else { return }
+        guard transformDuplicate == nil, let primary = activeLayerID else { return }
         commitTransform()
         guard canTransform else { return }
-        beginEdit("复制图层")
-        duplicateActiveLayer()
-        guard let copy = activeLayerID, copy != source else { endEdit(); return }
-        transformDuplicate = (copy, source)
+        let selection = selectedLayerIDs
+        // Bottom to top, so the copies keep the order they had.
+        let carried = selection.reduce(into: Set<UUID>()) { $0.formUnion(descendantIDs(of: $1)) }
+        let targets = (document?.layers ?? []).filter { selection.contains($0.id) && !carried.contains($0.id) }.map(\.id)
+        guard !targets.isEmpty else { return }
+        beginEdit(targets.count > 1 ? "Duplicate Layers" : "Duplicate Layer")
+        var copies: [UUID] = []
+        for id in targets {
+            selectLayer(id)
+            duplicateActiveLayer()
+            if let copy = activeLayerID, copy != id { copies.append(copy) }
+        }
+        guard !copies.isEmpty else { endEdit(); selectLayers(selection, primary: primary); return }
+        transformDuplicate = (copies, selection, primary)
+        selectLayers(Set(copies), primary: copies.last)
         beginTransform(persistent: false)
     }
     func commitTransform() {
@@ -376,8 +457,10 @@ final class EditorSession {
         guard let edit = transformEdit else { return }
         transformEdit = nil
         if let duplicate = transformDuplicate {
-            document?.layers.removeAll { $0.id == duplicate.copy }
-            activeLayerID = duplicate.source
+            let removed = duplicate.copies.reduce(into: Set(duplicate.copies)) { $0.formUnion(descendantIDs(of: $1)) }
+            document?.layers.removeAll { removed.contains($0.id) }
+            collapsedGroupIDs.subtract(removed)
+            selectLayers(duplicate.source, primary: duplicate.primary)
             transformDuplicate = nil
             endEdit()
         }
@@ -443,7 +526,7 @@ final class EditorSession {
     var isModified: Bool { history.isModified }
     var canUseHistory: Bool {
         _ = showsBusy
-        return !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && transformEdit == nil
+        return selectionAmountOperation == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && transformEdit == nil
     }
     var canUndo: Bool { canUseHistory && (history.canUndo || gradientEdit != nil) }
     var canRedo: Bool { canUseHistory && history.canRedo }
@@ -480,7 +563,7 @@ final class EditorSession {
     var activeLayer: ImageLayer? { document?.layers.first { $0.id == activeLayerID } }
     var canEditLayers: Bool {
         _ = showsBusy
-        return document != nil && brushStroke == nil && warpStroke == nil && !isProjectBusy && !isImporting && !showsNewDocument && !showsImporter && renamingLayerID == nil && transformEdit == nil && cropRect == nil && gradientEdit == nil && pixelMove == nil && hueSaturation == nil && levels == nil && filterEdit == nil && adjustmentEditingID == nil
+        return selectionAmountOperation == nil && textDraft == nil && document != nil && brushStroke == nil && warpStroke == nil && !isProjectBusy && !isImporting && !showsNewDocument && !showsImporter && renamingLayerID == nil && transformEdit == nil && cropRect == nil && gradientEdit == nil && pixelMove == nil && hueSaturation == nil && levels == nil && filterEdit == nil && adjustmentEditingID == nil
     }
 
     func addBlankLayer() {
@@ -661,7 +744,7 @@ final class EditorSession {
         activeLayerID = layer.id
     }
 
-    /// `emptyLayer` starts the canvas with a selected blank "图层 1", as File > New does.
+    /// `emptyLayer` starts the canvas with a selected blank "Layer 1", as File > New does.
     func createDocument(width: Int, height: Int, emptyLayer: Bool = false) {
         guard !isProjectBusy, !isImporting, (1...30_000).contains(width), (1...30_000).contains(height) else { return }
         commitTransform()

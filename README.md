@@ -1,86 +1,79 @@
-# Compositor（中文汉化版）
+# Compositor
 
-Adobe Photoshop 价格太高，而 GIMP 等工具又不够顺手，很难保持工作流。因此作者构建了 Compositor。
+Adobe Photoshop costs too much and tools like GIMP don’t feel familiar enough for me to stay in flow. That’s why I built Compositor.
 
-目标是打造一款完全免费、开源的全功能图像编辑器。作者使用 Photoshop 进行合成与后期处理，Compositor 也是围绕这一工作流构建的——包含制作像素级最终成片所需的工具。
+The goal was to create a full-featured image editor that is completely free and open source. I use Photoshop for compositing and post-processing, so Compositor is built around that workflow - with the tools needed to create a pixel-perfect final image.
 
-因为开源，你可以下载 Xcode 工程，并按自己的工作流增删或修改任意功能。
+Because it’s open source, you can download the Xcode project and add, remove, or modify any feature to fit your workflow.
 
-本仓库为 Compositor 的中文界面汉化版本。
+## Features
 
-## 功能
+### Layers
+- Layers and folders, with blend modes and opacity
+- Layer masks: paint, fill, invert, blur and feather them; link or unlink them to transform a mask on its own
+- Clipping masks and folder masks
+- Adjustment layers: Hue/Saturation, Levels, Curves, Exposure, Gradient Map and Grain
+- Merge Down, Merge Layers and Merge Group (⌘E)
+- Duplicate, rename inline, reorder and nest by drag and drop; Option-drag to duplicate
+- Drag layers between open projects
 
-### 图层
-- 图层与文件夹，支持混合模式与不透明度
-- 图层蒙版：绘制、填充、反相、模糊与羽化；可链接或取消链接，以便单独变换蒙版
-- 剪贴蒙版与文件夹蒙版
-- 调整图层：色相/饱和度、色阶、曲线、曝光度、渐变映射与颗粒
-- 向下合并、合并图层与合并组（⌘E）
-- 复制、行内重命名、拖放排序与嵌套；Option 拖动可复制
-- 可在已打开的项目之间拖动图层
+### Transform
+- Non-destructive move, scale, rotate and flip — images keep their full resolution however small you make them
+- Free distort (⌘-drag a handle), with Shift to lock to an axis
+- Transform several layers, or a whole folder, together
+- Snapping to canvas and layer edges and centers, with guides
+- Exact values for position, size, scale and angle, stepped with the arrow keys
+- Flip Layer and Flip Canvas, horizontal and vertical
 
-### 变换
-- 非破坏性移动、缩放、旋转与翻转——无论缩小多少，图像都保持完整分辨率
-- 自由扭曲（⌘-拖动手柄），按住 Shift 锁定到轴
-- 可同时变换多个图层，或整个文件夹
-- 吸附到画布与图层的边缘和中心，并显示参考线
-- 可精确输入位置、大小、缩放与角度，并用方向键步进
-- 水平/垂直翻转图层与翻转画布
+### Selections
+- Rectangle and Ellipse Marquee, Freehand and Polygonal Lasso, and Magic Wand
+- Add to and subtract from selections, move the outline, or move and duplicate the pixels inside
+- Load a layer's pixels or a mask as a selection
+- Content-Aware Fill, which can also extend an image past its edges
 
-### 选区
-- 矩形与椭圆选框、自由套索与多边形套索、魔棒
-- 添加/减去选区、移动轮廓，或移动并复制内部像素
-- 将图层像素或蒙版载入为选区
-- 内容识别填充，也可将图像扩展到边缘之外
+### Painting and retouching
+- Brush with size, hardness and opacity, and Shift for straight lines
+- Spot Healing Brush (content-aware)
+- Clone Stamp, aligned or not, sampling one layer or all of them
+- Blur tool, on pixels or masks
+- Gradient tool and Shape tool (rectangles, rounded rectangles and ellipses)
+- Type tool (T): inline multiline editing in draggable, resizable paragraph boxes; font, size, color, alignment and spacing in the tool header; transform text and use it as a clipping mask
+- Eyedropper and a full color picker
 
-### 绘画与修饰
-- 画笔：大小、硬度与不透明度，按 Shift 画直线
-- 污点修复画笔（内容识别）
-- 仿制图章：可对齐或不对齐，可从当前图层或所有图层取样
-- 模糊工具：作用于像素或蒙版
-- 渐变工具与形状工具（矩形、圆角矩形、椭圆）
-- 吸管与完整拾色器
+### Adjustments and filters
+- Levels (with Auto), Curves, Hue/Saturation, Exposure, Gradient Map, Grain and Invert
+- Gaussian Blur and Motion Blur that spread past a layer's edges
+- Add Noise, Lens Correction and Remove Background
+- Live previews, limited to the selection when there is one
 
-### 调整与滤镜
-- 色阶（含自动）、曲线、色相/饱和度、曝光度、渐变映射、颗粒与反相
-- 高斯模糊与动感模糊，可扩散到图层边缘之外
-- 添加杂色、镜头校正与移除背景
-- 实时预览；存在选区时仅作用于选区
+### Canvas and files
+- Multiple projects in tabs
+- Crop with snapping, and Option for symmetric cropping
+- Canvas Size and Image Size
+- Sharp high-quality downsampling when zoomed out, and a pixel grid when zoomed in
+- Import JPEG, PNG, HEIC and TIFF — including dropped screenshots and images from other apps
+- Export JPEG with a live preview (⇧⌥⌘S); Copy Merged
+- Photoshop-style keyboard shortcuts throughout
 
-### 画布与文件
-- 多项目标签页
-- 裁剪支持吸附；按住 Option 可对称裁剪
-- 画布大小与图像大小
-- 缩小时锐利高质量降采样，放大时显示像素网格
-- 导入 JPEG、PNG、HEIC 与 TIFF——包括拖入的截图及其他应用的图像
-- 导出 JPEG 带实时预览（⇧⌥⌘S）；合并拷贝
-- 全程 Photoshop 风格快捷键
-
-## 系统要求
+## Requirements
 
 - macOS 26
-- Xcode 26（从源码构建时）
+- Xcode 26 (to build from source)
 
-## 构建
+## Building
 
-打开 `Compositor.xcodeproj`，运行 **Compositor** scheme。
+Open `Compositor.xcodeproj` and run the **Compositor** scheme.
 
-## 发布
+## Releasing
 
-`scripts/release.sh` 会构建 Release 版本，用 Developer ID 签名、公证并装订，然后打包为 `dist/Compositor-<version>.dmg`。
+`scripts/release.sh` builds a Release version, signs it with Developer ID, notarizes and staples it, and packages it into `dist/Compositor-<version>.dmg`.
 
-它需要以下条件（均放在本仓库之外）：
+It needs, all kept outside this repository:
 
-- 登录钥匙串中的 **Developer ID Application** 证书
-- 用 `xcrun notarytool store-credentials "compositor-notary" …` 保存的公证凭据
-- [`create-dmg`](https://github.com/create-dmg/create-dmg)（`brew install create-dmg`）
+- a **Developer ID Application** certificate in the login keychain
+- notarization credentials saved with `xcrun notarytool store-credentials "compositor-notary" …`
+- [`create-dmg`](https://github.com/create-dmg/create-dmg) (`brew install create-dmg`)
 
-## 许可
+## License
 
-MIT — 见 [LICENSE](LICENSE)。
-
-## 汉化说明
-
-- 界面菜单、工具提示、面板、对话框、历史记录名称与默认图层名已译为中文。
-- 可序列化枚举（混合模式、调整类型等）的 `rawValue` 仍保留英文，以兼容项目文件格式；界面通过 `displayName` 显示中文。
-- 原项目地址：https://github.com/robbietilton/Compositor
+MIT — see [LICENSE](LICENSE).

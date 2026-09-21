@@ -23,7 +23,7 @@ struct LayersPanel: View {
                 VStack(spacing: 10) {
                     Image(systemName: "square.3.layers.3d").font(.system(size: 25, weight: .light))
                     Text("尚无图层").font(.callout.weight(.medium))
-                    Text(session.document == nil ? "创建画布或导入图像。" : "导入图像或添加空白图层。")
+                    Text(session.document == nil ? "创建画布或导入图像。" : "导入图像，或添加空白图层。")
                         .font(.caption).multilineTextAlignment(.center)
                 }
                 .foregroundStyle(.secondary).padding(16)
@@ -39,6 +39,14 @@ struct LayersPanel: View {
                     .help("编组所选图层（⌘G）").accessibilityLabel("新建文件夹").disabled(!session.canEditLayers)
                 LayerMaskMenu(session: session)
                 Menu {
+                    ForEach(LayerEffectKind.allCases, id: \.self) { kind in
+                        Button(kind.displayName + "…") { session.addEffect(kind) }
+                    }
+                } label: { Image(systemName: "sparkles").footerHitArea() }
+                    .menuStyle(.borderlessButton).fixedSize()
+                    .help("图层效果：描边与投影").accessibilityLabel("图层效果")
+                    .accessibilityIdentifier("layerEffects").disabled(!session.canEditEffects)
+                Menu {
                     ForEach(AdjustmentKind.allCases, id: \.self) { kind in
                         Button(kind.displayName) { session.addAdjustment(kind) }
                     }
@@ -46,8 +54,8 @@ struct LayersPanel: View {
                     .menuStyle(.borderlessButton).fixedSize().help("新建调整图层").disabled(!session.canEditLayers)
                 Spacer()
                 Button { session.deleteLayerOrMask() } label: { Image(systemName: "trash").footerHitArea() }
-                    .help(session.isMaskSelected ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除所选图层" : "删除所选图层")
-                    .accessibilityLabel(session.isMaskSelected ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除所选图层" : "删除所选图层")
+                    .help(session.selectedEffect != nil ? "删除所选效果" : session.isMaskSelected ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除所选图层" : "删除所选图层")
+                    .accessibilityLabel(session.selectedEffect != nil ? "删除所选效果" : session.isMaskSelected ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除所选图层" : "删除所选图层")
                     .accessibilityIdentifier("deleteLayer")
                     .disabled(!session.canEditLayers || session.activeLayer == nil)
             }

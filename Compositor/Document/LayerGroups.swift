@@ -46,13 +46,44 @@ nonisolated enum LayerHierarchy {
     }
 }
 
+/// A folder's opacity multiplies into everything inside it: a layer at 50% in a folder at 50%
+/// shows at 25%, while the layer itself still reads 50% in the panel. Folders are pass-through —
+/// what's inside is drawn straight onto what is below, never composited as a unit — so the
+/// folder's opacity is applied to each of those layers rather than to the folder as a whole.
+nonisolated enum LayerOpacity {
+    static func effective(_ own: Double, parent: UUID?,
+                          folder: (UUID) -> (opacity: Double, parentID: UUID?)?) -> Double {
+        var opacity = own, id = parent, depth = 0
+        while let current = id, depth < 64, let node = folder(current) {
+            opacity *= node.opacity
+            id = node.parentID
+            depth += 1
+        }
+        return opacity
+    }
+}
+
 extension ImageLayer {
+    /// The opacity this layer is drawn at, folders included (see LayerOpacity).
+    func effectiveOpacity(in byID: [UUID: ImageLayer]) -> Double {
+        LayerOpacity.effective(opacity, parent: parentID) { byID[$0].map { ($0.opacity, $0.parentID) } }
+    }
     var hierarchyRecord: ProjectLayerRecord {
         ProjectLayerRecord(id: id, name: name, isVisible: isVisible, transform: transform,
             imageFile: asset == nil ? nil : "\(id.uuidString).png", parentID: parentID, isGroup: isGroup, opacity: opacity, blendMode: blendMode, maskFile: mask == nil ? nil : "\(id.uuidString).mask.png", maskEnabled: mask?.isEnabled, maskSourceID: maskSourceID, adjustment: adjustment, maskPlacement: mask?.placement, maskLinked: mask?.isLinked)
     }
 }
+extension ProjectLayerRecord {
+    /// The opacity this layer is drawn at, folders included (see LayerOpacity).
+    func effectiveOpacity(in byID: [UUID: ProjectLayerRecord]) -> Double {
+        LayerOpacity.effective(opacity ?? 1, parent: parentID) { byID[$0].map { ($0.opacity ?? 1, $0.parentID) } }
+    }
+}
 extension CanvasDocument {
+    var effectiveOpacities: [UUID: Double] {
+        let byID = Dictionary(uniqueKeysWithValues: layers.map { ($0.id, $0) })
+        return Dictionary(uniqueKeysWithValues: layers.map { ($0.id, $0.effectiveOpacity(in: byID)) })
+    }
     var hierarchyEntries: [LayerHierarchy.Entry] { LayerHierarchy.entries(layers.map(\.hierarchyRecord)) }
     var effectiveVisibleIDs: Set<UUID> { Set(hierarchyEntries.filter(\.visible).map { $0.layer.id }) }
     var renderLayers: [ImageLayer] {
@@ -63,11 +94,26 @@ extension CanvasDocument {
 
 extension EditorSession {
     func selectLayers(_ ids: Set<UUID>, primary: UUID?) {
+        effectSelection = nil
+        if ids != selectedLayerIDs, !finishText() { return }
         guard brushStroke == nil else { return }
         let valid = ids.intersection(Set(document?.layers.map(\.id) ?? []))
         if valid != selectedLayerIDs { commitTransform(); resolveGradient() }
         activeLayerID = primary.flatMap { valid.contains($0) ? $0 : nil } ?? valid.first
         selectedLayerIDs = valid
+    }
+
+    /// Cmd-Shift-click on the canvas: adds a layer to the selection, or takes it out again when it is already in it.
+    func extendSelection(with id: UUID) {
+        guard canEditLayers || transformEdit != nil, document?.layers.contains(where: { $0.id == id }) == true else { return }
+        var ids = selectedLayerIDs
+        if ids.contains(id), ids.count > 1 {
+            ids.remove(id)
+            selectLayers(ids, primary: activeLayerID == id ? ids.first : activeLayerID)
+        } else {
+            ids.insert(id)
+            selectLayers(ids, primary: id)
+        }
     }
 
     func groupSelectedLayers() {

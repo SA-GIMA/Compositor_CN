@@ -220,6 +220,7 @@ extension EditorSession {
     /// Layers and folders alike take a mask.
     var canEditMask: Bool { canEditLayers && selectedLayerIDs.count == 1 && activeLayer != nil }
     func selectLayerTarget(_ id: UUID, mask: Bool) {
+        effectSelection = nil
         guard !isProjectBusy, !isImporting, brushStroke == nil else { return }
         resolveGradient()
         selectLayer(id)
@@ -241,13 +242,12 @@ extension EditorSession {
             let context = try BrushRaster.context(width: width, height: height, mask: true)
             context.setFillColor(gray: revealing ? 1 : 0, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-            var toPixels = BrushRaster.pixelToDocument(layer.transform, width: width, height: height).inverted()
-            if let outline = selection.path.copy(using: &toPixels) {
-                context.setShouldAntialias(selection.antialiased)
-                context.setFillColor(gray: revealing ? 0 : 1, alpha: 1)
-                context.addPath(outline)
-                context.fillPath(using: .winding)
-            }
+            guard let canvasSize = document?.size else { return }
+            let clip = try selection.clip(canvas: canvasSize)
+            context.concatenate(BrushRaster.pixelToDocument(layer.transform, width: width, height: height).inverted())
+            clip.apply(to: context)
+            context.setFillColor(gray: revealing ? 0 : 1, alpha: 1)
+            context.fill(clip.rect)
             guard let image = context.makeImage() else { throw ExportError.render }
             let mask = LayerMask(asset: try LayerMask.asset(from: image))
             finishOpacityEdit()
@@ -264,7 +264,7 @@ extension EditorSession {
         guard canEditMask, activeLayer?.mask == nil, let mask = LayerMask.solid(revealing: revealing),
               let index = document?.layers.firstIndex(where: { $0.id == activeLayerID }) else { return }
         finishOpacityEdit()
-        beginEdit(revealing ? "添加全部显示蒙版" : "添加全部隐藏蒙版")
+        beginEdit(revealing ? "Add Reveal-All Mask" : "Add Hide-All Mask")
         document?.layers[index].mask = mask
         isMaskSelected = true
         endEdit()
@@ -273,7 +273,7 @@ extension EditorSession {
         guard canEditMask, activeLayer?.mask != nil,
               let index = document?.layers.firstIndex(where: { $0.id == activeLayerID }) else { return }
         finishOpacityEdit()
-        beginEdit(activeLayer?.mask?.isEnabled == true ? "停用图层蒙版" : "启用图层蒙版")
+        beginEdit(activeLayer?.mask?.isEnabled == true ? "Disable Layer Mask" : "Enable Layer Mask")
         document?.layers[index].mask?.isEnabled.toggle()
         endEdit()
     }
@@ -302,7 +302,7 @@ extension EditorSession {
         commitTransform()
         finishOpacityEdit()
         mask.placement = from.maskTransform
-        beginEdit(layers[index].mask == nil ? "拷贝图层蒙版" : "替换图层蒙版")
+        beginEdit(layers[index].mask == nil ? "Copy Layer Mask" : "Replace Layer Mask")
         document?.layers[index].mask = mask
         selectLayer(target)
         isMaskSelected = true
@@ -314,7 +314,7 @@ extension EditorSession {
               let mask = document?.layers[index].mask else { return }
         commitTransform()
         finishOpacityEdit()
-        beginEdit(mask.isLinked ? "取消链接图层蒙版" : "链接图层蒙版")
+        beginEdit(mask.isLinked ? "Unlink Layer Mask" : "Link Layer Mask")
         document?.layers[index].mask?.isLinked.toggle()
         endEdit()
     }
@@ -349,7 +349,7 @@ extension EditorSession {
                                                      background: LayerMask.background(of: mask.asset.thumbnail))
                 let asset = moved.image === mask.asset.image ? mask.asset : try LayerMask.asset(from: moved.image)
                 finishOpacityEdit()
-                beginEdit("扭曲图层蒙版")
+                beginEdit("Distort Layer Mask")
                 document?.layers[index].mask = LayerMask(asset: asset, isEnabled: mask.isEnabled,
                     placement: moved.transform.samePlacement(as: layer.transform) ? nil : moved.transform, isLinked: mask.isLinked)
                 endEdit()

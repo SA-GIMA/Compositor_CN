@@ -1,3 +1,4 @@
+import AppKit
 import Vision
 import CoreImage
 
@@ -106,5 +107,37 @@ nonisolated enum SubjectRemoval {
             kCIInputMaskImageKey: mask
         ])
         return try PixelAdjust.render(output, width: image.width, height: image.height, isMask: false)
+    }
+}
+
+
+extension EditorSession {
+    /// Select → Subject: the foreground Vision finds in the canvas as it is shown, outlined as a selection. The
+    /// same shape Remove Background masks out, as a selection instead.
+    var canSelectSubject: Bool { canEditSelection && document != nil && !isProjectBusy }
+
+    func selectSubject(mode: SelectionMode = .replace) async {
+        guard canSelectSubject, let document,
+              let context = try? BrushRaster.context(width: document.width, height: document.height, mask: false) else { return }
+        drawLiveComposite(document, in: context)
+        guard let shown = context.makeImage() else { return }
+        isProjectBusy = true
+        let found = await Task.detached(priority: .userInitiated) { () -> Result<CGImage, Error> in
+            do { return .success(try SubjectRemoval.subjectMask(shown, under: nil, settings: FilterSettings())) }
+            catch { return .failure(error) }
+        }.value
+        isProjectBusy = false
+        guard self.document?.id == document.id else { return }
+        switch found {
+        case .failure(let error):
+            brushError = error.localizedDescription
+        case .success(let mask):
+            // White where the subject is, so its outline is the selection.
+            guard let traced = MaskTracing.whitePixels(in: mask) else { NSSound.beep(); return }
+            var toDocument = BrushRaster.pixelToDocument(LayerTransform(origin: .zero, size: document.size),
+                                                         width: mask.width, height: mask.height)
+            guard let outline = traced.copy(using: &toDocument) else { return }
+            applySelection(outline, mode: mode, name: "Select Subject")
+        }
     }
 }

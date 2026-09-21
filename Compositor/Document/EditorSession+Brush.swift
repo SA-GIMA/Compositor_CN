@@ -112,13 +112,13 @@ extension EditorSession {
             mask = original.replacing(ImportedImage(image: try raster.makeImage(), thumbnail: try raster.thumbnail(),
                 name: original.asset.name, raster: raster))
         }
-        beginEdit(stroke.editName ?? (stroke.isMask ? "绘制蒙版" : stroke.settings.erasing ? "擦除" : stroke.isBlur ? "模糊" : stroke.clone != nil ? "仿制图章" : stroke.settings.healing ? "污点修复" : "画笔描边"))
+        beginEdit(stroke.editName ?? (stroke.isMask ? "绘制蒙版" : stroke.settings.erasing ? "Erase" : stroke.isBlur ? "Blur" : stroke.clone != nil ? "仿制图章" : stroke.settings.healing ? "污点修复" : "画笔描边"))
         if stroke.isMask {
             document?.layers[index].mask = current.mask.map { $0.replacing(result.asset) } ?? LayerMask(asset: result.asset)
         } else {
             document?.layers[index] = ImageLayer(id: current.id, asset: result.asset, name: current.name,
                 isVisible: current.isVisible, transform: result.transform, parentID: current.parentID, isGroup: false,
-                opacity: current.opacity, blendMode: current.blendMode, mask: mask, maskSourceID: current.maskSourceID)
+                opacity: current.opacity, blendMode: current.blendMode, mask: mask, maskSourceID: current.maskSourceID, effects: current.effects)
         }
         endEdit()
     }
@@ -155,7 +155,7 @@ extension EditorSession {
                     var kept = mask
                     kept.isEnabled = current.mask?.isEnabled ?? mask.isEnabled
                     return kept
-                }, maskSourceID: current.maskSourceID)
+                }, maskSourceID: current.maskSourceID, effects: current.effects)
         }
         alsoApply?()
         endEdit()

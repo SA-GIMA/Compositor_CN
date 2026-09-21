@@ -228,10 +228,10 @@ final class ProjectController {
     private func confirmReplacement() async -> Bool {
         guard session.isModified, session.document != nil else { return true }
         let alert = NSAlert()
-        alert.messageText = "是否将更改存储到 \(session.projectURL?.lastPathComponent ?? "未命名")？"
-        alert.informativeText = "如果不存储，更改将会丢失。"
+        alert.messageText = "Save changes to \(session.projectURL?.lastPathComponent ?? "未命名")?"
+        alert.informativeText = "Your changes will be lost if you don’t save them."
         alert.addButton(withTitle: "存储")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: "Cancel")
         alert.addButton(withTitle: "不存储")
         let response = await show(alert)
         if response == .alertFirstButtonReturn { return await saveCurrent() }

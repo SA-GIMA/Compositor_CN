@@ -9,16 +9,16 @@ struct LayerAppearanceControls: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Text("混合模式").font(.caption)
+                Text("Blend").font(.caption)
                 BlendModePicker(session: session)
-            }
+            }.disabled(!session.canEditAppearance)
             HStack(spacing: 6) {
-                Text("不透明度").font(.caption)
+                Text("Opacity").font(.caption)
                 Slider(value: Binding(get: { session.activeLayer?.opacity ?? 1 },
                                       set: { session.setLayerOpacity($0) }), in: 0...1,
                        onEditingChanged: { if $0 { session.beginOpacityEdit() } else { session.finishOpacityEdit() } })
                 HStack(spacing: 2) {
-                    TextField("不透明度百分比", text: $percentage)
+                    TextField("Opacity percent", text: $percentage)
                         .textFieldStyle(.roundedBorder).frame(width: 44).focused($focused)
                         .onSubmit { releaseFocus() }
                         .onExitCommand { releaseFocus() }
@@ -29,7 +29,7 @@ struct LayerAppearanceControls: View {
                     Text("%").font(.caption)
                 }
             }
-        }.padding(12).disabled(!session.canEditAppearance)
+        }.padding(12).disabled(!session.canEditOpacity)
             .onAppear { sync() }
             .onChange(of: session.activeLayer?.opacity) { _, _ in if !focused { sync() } }
             .onDisappear { session.finishOpacityEdit() }

@@ -6,9 +6,9 @@ struct CanvasSizeSheet: View {
     let finish: (CanvasSizeOptions?) -> Void
     @State private var draft: CanvasSizeDraft
     @State private var anchor = 4
-    @State private var extensionChoice = "透明"
+    @State private var extensionChoice = "Transparent"
     @State private var customColor = Color.white
-    private let anchorNames = ["左上", "上中", "右上", "左中", "中心", "右中", "左下", "下中", "右下"]
+    private let anchorNames = ["Top left", "Top center", "Top right", "Middle left", "Center", "Middle right", "Bottom left", "Bottom center", "Bottom right"]
 
     init(document: CanvasDocument, foreground: PaletteColor = .black, background: PaletteColor = .white, finish: @escaping (CanvasSizeOptions?) -> Void) {
         self.foreground = foreground
@@ -26,11 +26,11 @@ struct CanvasSizeSheet: View {
     private var fill: CanvasExtensionColor? {
         let color: NSColor
         switch extensionChoice {
-        case "透明": return nil
-        case "黑色": color = .black
-        case "前景色": color = foreground.nsColor
-        case "白色": color = .white
-        case "背景色": color = background.nsColor
+        case "Transparent": return nil
+        case "Black": color = .black
+        case "Foreground": color = foreground.nsColor
+        case "White": color = .white
+        case "Background": color = background.nsColor
         default: color = NSColor(customColor)
         }
         guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
@@ -40,37 +40,37 @@ struct CanvasSizeSheet: View {
     var body: some View { sheet.roundedControls() }
     @ViewBuilder private var sheet: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("画布大小").font(.title2.bold())
-            Text("当前：\(draft.originalWidth) × \(draft.originalHeight) 像素")
-            Text("\(bytes(draft.originalWidth, draft.originalHeight)) 未压缩 RGBA 画布")
+            Text("Canvas Size").font(.title2.bold())
+            Text("Current: \(draft.originalWidth) × \(draft.originalHeight) pixels")
+            Text("\(bytes(draft.originalWidth, draft.originalHeight)) uncompressed RGBA canvas")
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
-            Picker("单位", selection: $draft.unit) {
+            Picker("Units", selection: $draft.unit) {
                 ForEach(CanvasUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
             }
             HStack {
-                Text("宽度").frame(width: 60, alignment: .leading)
-                TextField("宽度", value: dimension(true), format: .number.precision(.fractionLength(0...3)))
+                Text("Width").frame(width: 60, alignment: .leading)
+                TextField("Width", value: dimension(true), format: .number.precision(.fractionLength(0...3)))
             }
             HStack {
-                Text("高度").frame(width: 60, alignment: .leading)
-                TextField("高度", value: dimension(false), format: .number.precision(.fractionLength(0...3)))
+                Text("Height").frame(width: 60, alignment: .leading)
+                TextField("Height", value: dimension(false), format: .number.precision(.fractionLength(0...3)))
             }
-            Toggle("相对当前尺寸", isOn: $draft.relative)
-            Toggle("锁定原始长宽比", isOn: $draft.locked)
+            Toggle("Relative to current dimensions", isOn: $draft.relative)
+            Toggle("Lock original aspect ratio", isOn: $draft.locked)
                 .onChange(of: draft.locked) { _, locked in
                     if locked { draft.set(draft.displayed(widthAxis: true), widthAxis: true) }
                 }
             if draft.valid {
-                Text("新尺寸：\(Int(draft.width.rounded())) × \(Int(draft.height.rounded())) 像素 · \(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) 未压缩")
+                Text("New: \(Int(draft.width.rounded())) × \(Int(draft.height.rounded())) pixels · \(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) uncompressed")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Text("最终尺寸每边必须为 1–30,000 像素。")
+                Text("Final dimensions must be 1–30,000 pixels per side.")
                     .font(.callout).foregroundStyle(.orange)
             }
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("锚点")
+                    Text("Anchor")
                     Grid(horizontalSpacing: 3, verticalSpacing: 3) {
                         ForEach(0..<3) { row in
                             GridRow {
@@ -82,7 +82,7 @@ struct CanvasSizeSheet: View {
                                     }
                                     .tint(index == anchor ? .accentColor : .secondary)
                                     .help(anchorNames[index]).accessibilityLabel(anchorNames[index])
-                                    .accessibilityValue(index == anchor ? "已选中" : "")
+                                    .accessibilityValue(index == anchor ? "Selected" : "")
                                 }
                             }
                         }
@@ -90,23 +90,23 @@ struct CanvasSizeSheet: View {
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text(anchorNames[anchor]).font(.callout.bold())
-                    Text("固定此点。图像不会缩放；被裁掉的内容仍保留在画布之外。")
+                    Text("Keeps this point fixed. Artwork is not scaled; cropped content remains outside the canvas.")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(.top, 28)
             }
-            Picker("画布扩展", selection: $extensionChoice) {
-                ForEach(["透明", "前景色", "背景色", "黑色", "白色", "自定"], id: \.self) { Text($0) }
+            Picker("Canvas extension", selection: $extensionChoice) {
+                ForEach(["Transparent", "Foreground", "Background", "Black", "White", "Custom"], id: \.self) { Text($0) }
             }
-            if extensionChoice == "自定" {
-                ColorPicker("扩展区域颜色", selection: $customColor, supportsOpacity: false)
+            if extensionChoice == "Custom" {
+                ColorPicker("Extension color", selection: $customColor, supportsOpacity: false)
             }
             HStack {
-                Button("取消") { finish(nil) }.keyboardShortcut(.cancelAction)
+                Button("取消") { finish(nil) }.configuredNativeShortcut(.escape)
                 Spacer()
                 Button("好") {
                     guard draft.valid else { return }
                     finish(CanvasSizeOptions(width: Int(draft.width.rounded()), height: Int(draft.height.rounded()), anchor: anchor, fill: fill))
-                }.keyboardShortcut(.defaultAction).disabled(!draft.valid)
+                }.configuredNativeShortcut(.return).disabled(!draft.valid)
             }
         }.textFieldStyle(.roundedBorder).padding(24).frame(width: 450)
     }

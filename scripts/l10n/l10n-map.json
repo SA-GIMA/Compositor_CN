@@ -30,6 +30,6 @@
     ]
   },
   "global": {
-    "notes": "Extend here when new upstream UI English appears. Prefer exact source snippets."
+    "notes": "v1.1.8 drift covered in apply_l10n: LayerBlendMode.softLight=柔光, ShapeKind.line=直线, ColorRange/WandMode/LayerEffectKind/HueSampleMode displayName, plus LayersPanel/LassoControls/HueSaturationSheet/FilterSheet UI copy."
   }
 }

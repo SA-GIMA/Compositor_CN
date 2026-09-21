@@ -86,7 +86,7 @@ nonisolated enum LiveMaskBaker {
             } else {
                 ctx.saveGState(); ctx.concatenate(inverse)
                 LayerRenderer.draw(image, transform: layer.transform, center: layer.transform.center,
-                    opacity: layer.opacity ?? 1,
+                    opacity: layer.effectiveOpacity(in: records),
                     mask: snapshot.mask(for: layer).flatMap { $0.clipImage(placement: $0.placement, over: layer.transform, width: image.width, height: image.height) }, in: ctx)
                 ctx.restoreGState()
             }
@@ -107,7 +107,7 @@ extension EditorSession {
         guard !targets.isEmpty else { return false }
         let alert = NSAlert()
         alert.messageText = ids.count == 1 ? "此图层正在提供实时蒙版" : "这些图层正在提供实时蒙版"
-        alert.informativeText = "“栅格化并删除”会把当前蒙版外观写入依赖图层的像素；“移除链接并删除”会显示其原始像素。两种操作都可以撤销。"
+        alert.informativeText = "Bake keeps the current masked appearance in the dependent layers’ pixels. Remove Links reveals their pixels. You can undo either choice."
         alert.addButton(withTitle: "栅格化并删除")
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "移除链接并删除")
@@ -164,10 +164,18 @@ extension EditorSession {
         let records = Dictionary(uniqueKeysWithValues: document.layers.map { ($0.id, $0) })
         let live = LiveMaskRenderer(bounds: context.boundingBoxOfClipPath, source: { records[$0]?.maskSourceID }) { id, ctx in
             guard let layer = records[id], let image = layer.asset?.image else { return }
+            let opacity = layer.effectiveOpacity(in: records)
             let transform = self.displayedTransform(for: layer)
             let mask = layer.mask?.clipImage(placement: self.displayedMaskPlacement(for: layer), over: transform, width: image.width, height: image.height)
+            let effects = LayerEffectsRenderer.cached(image, mask: mask, effects: layer.effects)
             func drawLayer(_ mode: LayerBlendMode, _ target: CGContext) {
-                LayerRenderer.draw(image, transform: transform, center: transform.center, opacity: layer.opacity,
+                if let effects {
+                    let grown = LayerEffectsRenderer.placed(transform, image: effects.image, inset: effects.inset)
+                    LayerRenderer.draw(effects.image, transform: grown, center: grown.center, opacity: opacity,
+                        blendMode: mode, mask: nil, in: target)
+                    return
+                }
+                LayerRenderer.draw(image, transform: transform, center: transform.center, opacity: opacity,
                     blendMode: mode, mask: mask, in: target)
             }
             let mode = self.displayedBlendMode(for: layer)
@@ -176,7 +184,7 @@ extension EditorSession {
             drawLayer(mode, ctx)
         }
         live.adjustment = { records[$0]?.adjustment }
-        live.adjustmentOpacity = { records[$0]?.opacity ?? 1 }
+        live.adjustmentOpacity = { records[$0]?.effectiveOpacity(in: records) ?? 1 }
         live.adjustmentClip = { id, ctx in
             if let layer = records[id], let image = layer.mask?.enabledImage {
                 FolderMaskClip(image: image, transform: layer.transform).apply(center: layer.transform.center, in: ctx)

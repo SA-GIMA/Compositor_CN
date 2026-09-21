@@ -10,7 +10,9 @@ struct ContentView: View {
     @State private var canvasFrame: CGRect = .zero
     @State private var levelsPanel = FloatingPanelController(name: "levelsPanel")
     @State private var adjustmentPanel = FloatingPanelController(name: "adjustmentPanel")
+    @State private var selectionAmountPanel = FloatingPanelController(name: "selectionAmountPanel")
     @State private var filterPanel = FloatingPanelController(name: "filterPanel")
+    @State private var effectsPanel = FloatingPanelController(name: "effectsPanel")
     @State private var isDropTargeted = false
     /// The window's width, so the tab strip can use the toolbar's free space.
     @State private var windowWidth: CGFloat = 1180
@@ -37,14 +39,18 @@ struct ContentView: View {
                 GradientControls(session: session)
                 Divider()
             }
+            if session.tool == .type {
+                TypeControls(session: session)
+                Divider()
+            }
             if session.tool == .shape {
                 ShapeControls(session: session)
                 Divider()
             }
             if session.tool == .eyedropper {
                 HStack(spacing: 16) {
-                    Text("吸管").font(ToolHeaderStyle.titleFont)
-                    Toggle("取样环", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
+                    Text("Eyedropper").font(ToolHeaderStyle.titleFont)
+                    Toggle("Sample Ring", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
                     Spacer()
                 }.padding(.horizontal, 18).toolHeaderBar()
                 Divider()
@@ -60,7 +66,7 @@ struct ContentView: View {
             // No tool (A) keeps the header, so the canvas doesn't jump.
             if session.tool == .idle {
                 HStack(spacing: 16) {
-                    Text("选择工具").font(ToolHeaderStyle.titleFont)
+                    Text("Select a tool").font(ToolHeaderStyle.titleFont)
                     Spacer()
                 }.padding(.horizontal, 18).toolHeaderBar()
                 Divider()
@@ -68,11 +74,26 @@ struct ContentView: View {
             HStack(spacing: 0) {
                 toolRail
                 Divider()
-                ZStack {
-                    EditorCanvas(session: session)
-                    if session.document == nil { welcome }
+                VStack(spacing: 0) {
+                    if session.showsRulers, session.document != nil {
+                        HStack(spacing: 0) {
+                            CanvasRulerCorner()
+                            CanvasRulerView(session: session, axis: .horizontal)
+                                .frame(height: CanvasRuler.thickness)
+                        }
+                    }
+                    HStack(spacing: 0) {
+                        if session.showsRulers, session.document != nil {
+                            CanvasRulerView(session: session, axis: .vertical)
+                                .frame(width: CanvasRuler.thickness)
+                        }
+                        ZStack {
+                            EditorCanvas(session: session)
+                            if session.document == nil { welcome }
+                        }
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("editor")) } action: { canvasFrame = $0 }
+                    }
                 }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("editor")) } action: { canvasFrame = $0 }
                 PanelResizeEdge(width: $layersPanelWidth, range: LayersPanel.widths)
                 LayersPanel(session: session, width: layersPanelWidth)
             }
@@ -119,8 +140,8 @@ struct ContentView: View {
         .navigationTitle(session.projectURL?.deletingPathExtension().lastPathComponent ?? "未命名")
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button { requestNewCanvas() } label: { Label("新建画布", systemImage: "plus") }
-                    .help("新建画布（⌘N）").accessibilityIdentifier("newCanvasToolbar")
+                Button { requestNewCanvas() } label: { Label("New canvas", systemImage: "plus") }
+                    .help("New canvas (⌘N)").accessibilityIdentifier("newCanvasToolbar")
                     .disabled(session.isImporting || session.showsBusy || session.levels != nil)
                     .modifier(NewProjectDropTarget(workspace: applicationDelegate?.workspace))
             }
@@ -139,39 +160,60 @@ struct ContentView: View {
             // Without this spacer, the growing tab strip pushes the primary actions left.
             ToolbarSpacer(.flexible, placement: .navigation)
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("适合") { session.fit() }.help("适合画布到窗口（⌘0）")
+                Button("Fit") { session.fit() }.help("Fit canvas in window (⌘0)")
                     .accessibilityIdentifier("fitCanvas").disabled(session.document == nil)
-                Button("100%") { session.zoom(to: 1) }.help("实际像素（⌘1）")
+                Button("100%") { session.zoom(to: 1) }.help("Actual pixels (⌘1)")
                     .accessibilityIdentifier("actualPixels").disabled(session.document == nil)
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { session.zoom(to: session.viewport.zoom * 1.25) } label: {
                     Image(systemName: "plus.magnifyingglass")
-                }.help("放大（⌘+）").disabled(session.document == nil)
+                }.help("Zoom in (⌘+)").disabled(session.document == nil)
                 Button { session.zoom(to: session.viewport.zoom / 1.25) } label: {
                     Image(systemName: "minus.magnifyingglass")
-                }.help("缩小（⌘−）").disabled(session.document == nil)
+                }.help("Zoom out (⌘−)").disabled(session.document == nil)
             }
         }
         .onChange(of: session.levels == nil) { _, closed in
             if closed { levelsPanel.close() }
             else {
                 levelsPanel.onClose = { session.cancelLevels() }
-                levelsPanel.show(title: "色阶", content: LevelsSheet(session: session))
+                levelsPanel.show(title: "Levels", content: LevelsSheet(session: session))
             }
         }
         .onChange(of: session.hueSaturation == nil) { _, closed in
             if closed { adjustmentPanel.close() }
             else {
                 adjustmentPanel.onClose = { session.cancelHueSaturation() }
-                adjustmentPanel.show(title: "色相/饱和度", content: HueSaturationSheet(session: session))
+                adjustmentPanel.show(title: "Hue/Saturation", content: HueSaturationSheet(session: session))
             }
+        }
+        .onChange(of: session.effectsEditing) { _, selection in
+            if let selection {
+                effectsPanel.onClose = { session.finishEffectsEditing(commit: false) }
+                effectsPanel.show(title: selection.kind.rawValue, content: EffectsSheet(session: session, kind: selection.kind))
+            } else { effectsPanel.close() }
+        }
+        .onChange(of: session.document?.layers) { _, layers in
+            if let editing = session.effectsEditing,
+               layers?.first(where: { $0.id == editing.layerID })?.effects?.contains(editing.kind) != true {
+                if let picker = session.colorPicker, case .effect = picker.target { session.closeColorPicker(commit: false) }
+                session.effectsEditing = nil
+                session.effectsEditingOriginal = nil
+            }
+        }
+        .onChange(of: session.selectionAmountOperation) { _, operation in
+            if let operation {
+                selectionAmountPanel.onClose = { session.selectionAmountOperation = nil }
+                selectionAmountPanel.show(title: operation.rawValue + " Selection",
+                    content: SelectionAmountSheet(session: session, operation: operation))
+            } else { selectionAmountPanel.close() }
         }
         .onChange(of: session.filterEdit == nil) { _, closed in
             if closed { filterPanel.close() }
             else {
                 filterPanel.onClose = { session.cancelFilter() }
-                filterPanel.show(title: session.filterEdit?.kind.displayName ?? "滤镜", content: FilterSheet(session: session))
+                filterPanel.show(title: session.filterEdit?.kind.displayName ?? "Filter", content: FilterSheet(session: session))
             }
         }
         .onChange(of: session.document == nil) { _, empty in
@@ -185,15 +227,15 @@ struct ContentView: View {
                 if (error as NSError).code != NSUserCancelledError { session.importError = error.localizedDescription }
             }
         }
-        .alert("导入未完成", isPresented: Binding(
+        .alert("Import couldn’t finish", isPresented: Binding(
             get: { session.importError != nil }, set: { if !$0 { session.importError = nil } })) {
-                Button("好", role: .cancel) { session.importError = nil }
+                Button("OK", role: .cancel) { session.importError = nil }
             } message: { Text(session.importError ?? "") }
-        .alert("无法绘制", isPresented: Binding(get: { session.brushError != nil },
+        .alert("Couldn’t paint", isPresented: Binding(get: { session.brushError != nil },
             set: { if !$0 { session.brushError = nil } })) {
                 Button("好") { session.brushError = nil }
             } message: { Text(session.brushError ?? "") }
-        .alert("无法裁剪", isPresented: Binding(get: { session.cropError != nil },
+        .alert("Couldn’t crop", isPresented: Binding(get: { session.cropError != nil },
             set: { if !$0 { session.cropError = nil } })) {
                 Button("好") { session.cropError = nil }
             } message: { Text(session.cropError ?? "") }
@@ -212,6 +254,7 @@ struct ContentView: View {
                         if tool == .gradient { GradientToolIcon().frame(width: 18, height: 18) }
                         else if tool == .cloneStamp { CloneStampToolIcon().frame(width: 18, height: 18) }
                         else if tool == .lasso, session.lassoKind == .polygonal { PolygonalLassoToolIcon().frame(width: 18, height: 18) }
+                        else if tool == .wand, session.wandMode == .object { ObjectSelectionToolIcon().frame(width: 18, height: 18) }
                         // The Marquee's icon follows its shape: a dashed circle in Ellipse mode.
                         else { Image(systemName: tool == .marquee && session.marqueeKind == .ellipse ? "circle.dashed" : session.symbol(for: tool)).font(.system(size: 17)) }
                     }
@@ -248,17 +291,17 @@ struct ContentView: View {
                 Text(session.viewport.zoom, format: .percent.precision(.fractionLength(0...1)))
                     .frame(width: 62, alignment: .leading).accessibilityIdentifier("zoomStatus")
                 Text("\(document.width) × \(document.height) px").accessibilityIdentifier("canvasDimensions")
-                Text("sRGB · 透明")
-            } else { Text("随时可以开始") }
+                Text("sRGB · Transparent")
+            } else { Text("Ready when you are") }
             Spacer()
             if session.showsBusy {
                 ProgressView().controlSize(.mini)
                 Text("处理中…")
             } else if session.isImporting {
                 ProgressView().controlSize(.mini)
-                Text("正在导入图像…")
+                Text("Importing images…")
             } else {
-                Text(session.tool == .marquee ? (session.marqueeKind == .ellipse ? "拖动绘制椭圆 · Shift 添加 · Option 减去 · 拖动中再按 Shift 为正圆 · 在内部拖动移动 · Delete 清除 · ⌘D 取消选择" : "拖动绘制矩形 · Shift 添加 · Option 减去 · 拖动中再按 Shift 为正方形 · 在内部拖动移动 · ⌘ 拖动移动像素 · Delete 清除 · ⌘D 取消选择") : session.tool == .wand ? "点击选择相近颜色 · Shift 添加 · Option 减去 · 在内部拖动移动 · ⌘ 拖动移动像素 · Delete 清除 · ⌘D 取消选择" : session.tool == .lasso ? (session.lassoKind == .freehand ? "拖动建立选区 · 在内部拖动移动 · Shift 添加 · Option 减去 · Delete 清除 · ⌥⌫/⌘⌫ 填充 · ⌘D 取消选择" : "点击添加角点 · 点击起点、双击或回车闭合 · Delete 删除角点 · Escape 取消") : session.tool == .brush ? (session.brushMode == .erase ? "拖动擦除" : "拖动绘制") + " · [ ] 大小 · Shift-[ ] 硬度 · 1–0 不透明度 · Escape 取消 · 空格平移" : session.tool == .blur ? (session.blurMode == .blur ? "拖动柔化" : session.blurMode == .smudge ? "拖动涂抹" : "拖动推动像素") + " · [ ] 大小 · Shift-[ ] 硬度 · 1–0 强度 · 空格平移" : session.tool == .cloneStamp ? "Option 点击取样源 · 拖动仿制 · [ ] 大小 · Shift-[ ] 硬度 · 1–0 不透明度 · 空格平移" : session.tool == .spotHealing ? "在瑕疵上拖动修复 · [ ] 大小 · Shift-[ ] 硬度 · Escape 取消 · 空格平移" : session.tool == .shape ? "拖动在新图层上绘制形状 · Shift \(session.shapeKind == .rectangle ? "正方形" : "圆形") · Option 从中心绘制 · Shift-U 切换\(session.shapeKind == .rectangle ? "椭圆" : "矩形") · Escape 取消 · 空格平移" : session.tool == .gradient ? "拖动绘制 · 拖动端点调整 · Shift 45° · 1–0 不透明度 · 回车应用 · Escape 取消" : session.tool == .crop ? "拖动裁剪 · 回车应用 · Escape 取消 · 空格平移" : session.tool == .move ? "拖动移动 · 控制点缩放 · 圆圈旋转 · 1–0 图层不透明度 · 空格平移" : session.tool == .hand ? "拖动平移 · 双指缩放" : session.tool == .idle ? "未选择工具 · 按工具快捷键选择 · 空格平移" : "点击放大 · Option 点击缩小 · 左右拖动平滑缩放 · 空格平移")
+                Text(session.tool == .marquee ? (session.marqueeKind == .ellipse ? "Drag an ellipse · Shift add · Option subtract · Shift again mid-drag circle · Drag inside to move · Delete clears · ⌘D deselect" : "Drag a rectangle · Shift add · Option subtract · Shift again mid-drag square · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect") : session.tool == .wand ? (session.wandMode == .object ? "Click an object to select its outline · Tab for Wand · Shift add · Option subtract · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect" : "Click to select similar colors · Tab for Object · Shift add · Option subtract · Drag inside to move · ⌘-drag moves pixels · Delete clears · ⌘D deselect") : session.tool == .lasso ? (session.lassoKind == .freehand ? "Drag to select · Drag inside to move · Shift add · Option subtract · Delete clears · ⌥⌫/⌘⌫ fill · ⌘D deselect" : "Click corners · Click start, double-click or Enter to close · Delete removes corner · Escape cancel") : session.tool == .brush ? (session.brushMode == .erase ? "Drag to erase" : "Drag to paint") + " · [ ] size · Shift-[ ] hardness · 1–0 opacity · Escape cancel · Space to pan" : session.tool == .blur ? (session.blurMode == .blur ? "Drag to soften" : session.blurMode == .smudge ? "Drag to smudge" : "Drag to push pixels") + " · [ ] size · Shift-[ ] hardness · 1–0 strength · Space to pan" : session.tool == .cloneStamp ? "Option-click to set the source · Drag to clone · [ ] size · Shift-[ ] hardness · 1–0 opacity · Space to pan" : session.tool == .spotHealing ? "Drag over blemishes to heal · [ ] size · Shift-[ ] hardness · Escape cancel · Space to pan" : session.tool == .type ? "Drag a text box · Click text to edit · Drag box handles to resize · ⌘Return finish · Escape cancel" : session.tool == .shape ? "Drag to draw a shape on a new layer · Shift \(session.shapeKind == .line ? "45°" : session.shapeKind == .rectangle ? "square" : "circle") · Option from center · Shift-U or Tab for the next shape · Escape cancel · Space to pan" : session.tool == .gradient ? "Drag to draw · Drag ends to adjust · Shift 45° · 1–0 opacity · Enter apply · Escape cancel" : session.tool == .crop ? "Drag to crop · Enter apply · Escape cancel · Space to pan" : session.tool == .move ? "Drag to move · Handles to resize · Circle to rotate · 1–0 layer opacity · Space to pan" : session.tool == .hand ? "Drag to pan · Pinch to zoom" : session.tool == .idle ? "No tool selected · Press a tool's key to pick one · Space to pan" : "Click to zoom in · Option-click to zoom out · Drag right or left to zoom smoothly · Space to pan")
             }
         }
         .font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
@@ -284,7 +327,7 @@ private struct PanelResizeEdge: View {
                         width = min(range.upperBound, max(range.lowerBound, (start - value.translation.width).rounded()))
                     }
                     .onEnded { _ in startWidth = nil })
-                .help("拖动以调整面板宽度")
+                .help("Drag to resize the panel")
         }
     }
 }
@@ -316,7 +359,10 @@ extension View {
     func listen(step: Double) {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.editing, event.keyCode == 126 || event.keyCode == 125 else { return event }
+            // Only while a field really is being edited: a field left behind (its tool bar swapped out, say) must not
+            // keep taking Up and Down from the canvas, where they nudge the layer.
+            guard let self, self.editing, event.keyCode == 126 || event.keyCode == 125,
+                  NSApp.keyWindow?.firstResponder is NSTextView else { return event }
             let amount = step * (event.modifierFlags.contains(.shift) ? 10 : 1)
             self.change(self.value() + (event.keyCode == 126 ? amount : -amount))
             return nil

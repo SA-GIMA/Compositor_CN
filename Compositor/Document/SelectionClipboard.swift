@@ -15,7 +15,7 @@ extension EditorSession {
     func selectionCopyRegion() -> CGRect? {
         guard let document else { return nil }
         let canvas = CGRect(origin: .zero, size: document.size)
-        let bounds = selection?.path.boundingBoxOfPath ?? canvas
+        let bounds = selection?.coverageBounds ?? canvas
         let tolerance: CGFloat = 0.001
         let minX = floor(bounds.minX + tolerance), minY = floor(bounds.minY + tolerance)
         let region = CGRect(x: minX, y: minY, width: ceil(bounds.maxX - tolerance) - minX,
@@ -145,22 +145,34 @@ extension EditorSession {
     }
 
     func duplicateActiveLayer() {
-        guard canEditLayers, let layer = activeLayer, !layer.isGroup,
+        guard canEditLayers, let layer = activeLayer,
               let index = document?.layers.firstIndex(where: { $0.id == layer.id }) else { return }
-        let copy = ImageLayer(id: UUID(), asset: layer.asset, name: "\(layer.name) copy", isVisible: layer.isVisible,
-                              transform: layer.transform, parentID: layer.parentID, isGroup: false,
-                              opacity: layer.opacity, blendMode: layer.blendMode, mask: layer.mask, maskSourceID: layer.maskSourceID, adjustment: layer.adjustment, shape: layer.shape)
+        let included = descendantIDs(of: layer.id).union([layer.id])
+        let originals = (document?.layers ?? []).filter { included.contains($0.id) }
+        guard (document?.layers.count ?? 0) + originals.count <= 10_000 else { return }
+        let mapping = Dictionary(uniqueKeysWithValues: originals.map { ($0.id, UUID()) })
+        let copies = originals.map { original in
+            ImageLayer(id: mapping[original.id]!, asset: original.asset,
+                name: original.name + (original.id == layer.id ? " copy" : ""), isVisible: original.isVisible,
+                transform: original.transform, parentID: original.parentID.map { mapping[$0] ?? $0 },
+                isGroup: original.isGroup, opacity: original.opacity, blendMode: original.blendMode,
+                mask: original.mask, maskSourceID: original.maskSourceID.map { mapping[$0] ?? $0 },
+                adjustment: original.adjustment, shape: original.shape, effects: original.effects, text: original.text)
+        }
         beginEdit("复制图层")
-        document?.layers.insert(copy, at: index + 1)
-        activeLayerID = copy.id
+        document?.layers.insert(contentsOf: copies, at: index + 1)
+        for original in originals where collapsedGroupIDs.contains(original.id) {
+            collapsedGroupIDs.insert(mapping[original.id]!)
+        }
+        activeLayerID = mapping[layer.id]
         endEdit()
     }
 
     /// Option-drag in the Layers panel: a copy of the layer placed where it was dropped (inside `parent`,
-    /// above `target`, or at the very bottom), as one undo step. Folders aren't duplicated this way.
+    /// above `target`, or at the very bottom), as one undo step. Folders carry all descendants.
     @discardableResult
     func duplicateLayer(_ id: UUID, in parent: UUID?, above target: UUID? = nil, atBottom: Bool = false) -> Bool {
-        guard canEditLayers, let layer = document?.layers.first(where: { $0.id == id }), !layer.isGroup,
+        guard canEditLayers,
               canPlaceLayer(id, in: parent) else { return false }
         beginEdit("复制图层")
         defer { endEdit() }
@@ -172,11 +184,12 @@ extension EditorSession {
 
     /// Inserts pixels as a new layer above the active one (inside its folder), all in one undo
     /// step. Pasting drops the selection, as in Photoshop; a drawn shape keeps it.
-    func addPixelLayer(_ image: CGImage, at origin: CGPoint, name: String, editName: String, dropsSelection: Bool = true, shape: LayerShape? = nil) {
+    func addPixelLayer(_ image: CGImage, at origin: CGPoint, name: String, editName: String, dropsSelection: Bool = true, shape: LayerShape? = nil, text: LayerText? = nil) {
         guard let document, let thumbnail = try? PixelInvert.thumbnail(of: image) else { return }
         var layer = ImageLayer(asset: ImportedImage(image: image, thumbnail: thumbnail, name: name), origin: origin)
         layer.name = name
         layer.shape = shape
+        layer.text = text
         layer.parentID = activeLayer?.isGroup == true ? activeLayerID : activeLayer?.parentID
         let index = document.layers.firstIndex { $0.id == activeLayerID }.map { $0 + 1 } ?? document.layers.count
         finishOpacityEdit()

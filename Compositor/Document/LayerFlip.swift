@@ -38,7 +38,7 @@ extension EditorSession {
         let ids = Set(members.map(\.id))
         guard !ids.isEmpty else { return }
         finishOpacityEdit()
-        beginEdit(horizontally ? "水平翻转" : "垂直翻转")
+        beginEdit(horizontally ? "Flip Horizontal" : "Flip Vertical")
         for index in document.layers.indices where ids.contains(document.layers[index].id) {
             let layer = document.layers[index]
             let flipped = layer.transform.mirrored(horizontally: horizontally, across: axis)
@@ -58,7 +58,7 @@ extension EditorSession {
         guard canEditLayers, let document else { return }
         let axis = horizontally ? document.size.width / 2 : document.size.height / 2
         finishOpacityEdit()
-        beginEdit(horizontally ? "水平翻转画布" : "垂直翻转画布")
+        beginEdit(horizontally ? "Flip Canvas Horizontal" : "Flip Canvas Vertical")
         for index in document.layers.indices {
             let layer = document.layers[index]
             self.document?.layers[index].transform = layer.transform.mirrored(horizontally: horizontally, across: axis)
@@ -71,9 +71,10 @@ extension EditorSession {
                 ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: document.size.width, ty: 0)
                 : CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: document.size.height)
             if let path = selection.path.copy(using: &mirror) {
-                self.document?.selection = DocumentSelection(path: path, antialiased: selection.antialiased)
+                self.document?.selection = DocumentSelection(path: path, antialiased: selection.antialiased, feather: selection.feather)
             }
         }
+        self.document?.guides = document.guides.map { $0.mirrored(horizontally: horizontally, across: axis) }
         endEdit()
     }
 }

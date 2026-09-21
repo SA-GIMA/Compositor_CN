@@ -16,71 +16,71 @@ struct LevelsSheet: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Picker("通道", selection: Binding(get: { settings.channel }, set: { channel in update { $0.channel = channel } })) {
+            Picker("Channel", selection: Binding(get: { settings.channel }, set: { channel in update { $0.channel = channel } })) {
                 ForEach(LevelsChannel.allCases, id: \.self) { Text($0.displayName).tag($0) }
             }.frame(width: 180)
             VStack(spacing: 0) {
                 histogram.frame(height: 150).background(.black.opacity(0.25))
                     .overlay(alignment: .topLeading) {
-                        if edit?.histogramReady != true { Text("正在加载直方图…").font(.caption).padding(8) }
+                        if edit?.histogramReady != true { Text("Loading histogram…").font(.caption).padding(8) }
                     }
                 handles(output: false).frame(height: 20)
             }
             HStack {
-                field("输入黑色", value(\.black), decimals: 0)
+                field("Input black", value(\.black), decimals: 0)
                 Spacer()
-                field("伽马", value(\.gamma), decimals: 2)
+                field("Gamma", value(\.gamma), decimals: 2)
                 Spacer()
-                field("输入白色", value(\.white), decimals: 0)
+                field("Input white", value(\.white), decimals: 0)
             }
             VStack(spacing: 0) {
                 LinearGradient(colors: [.black, .white], startPoint: .leading, endPoint: .trailing).frame(height: 14)
                 handles(output: true).frame(height: 20)
             }
             HStack {
-                field("输出黑色", value(\.outputBlack), decimals: 0)
+                field("Output black", value(\.outputBlack), decimals: 0)
                 Spacer()
-                field("输出白色", value(\.outputWhite), decimals: 0)
+                field("Output white", value(\.outputWhite), decimals: 0)
             }
             HStack {
-                Text("取样").font(.caption).foregroundStyle(.secondary)
+                Text("Sample").font(.caption).foregroundStyle(.secondary)
                 ForEach(LevelsSample.allCases, id: \.self) { mode in
                     Button {
                         edit?.sampleMode = edit?.sampleMode == mode ? nil : mode
                         session.brushRevision += 1
                     } label: {
-                        Label(mode.displayName, systemImage: "eyedropper")
+                        Label(mode.rawValue, systemImage: "eyedropper")
                     }.tint(edit?.sampleMode == mode ? .accentColor : .secondary)
                 }
             }
             if let mode = edit?.sampleMode {
-                Text("点击原始图层以设置\(mode.displayName)。再次点击吸管可停止。")
+                Text("Click the original layer to set \(mode.rawValue.lowercased()). Click the eyedropper again to stop.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 6) {
-                Text("自动").font(.caption).foregroundStyle(.secondary)
+                Text("Auto").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     ForEach(LevelsAuto.allCases, id: \.self) { mode in
-                        Button(mode.displayName) { session.autoLevels(mode) }
+                        Button(mode.rawValue) { session.autoLevels(mode) }
                     }
                 }.disabled(edit?.histogramReady != true)
             }
             HStack {
-                Toggle("预览", isOn: Binding(get: { edit?.preview ?? true }, set: {
+                Toggle("Preview", isOn: Binding(get: { edit?.preview ?? true }, set: {
                     session.updateLevels(settings, preview: $0)
-                })).keyboardShortcut("p", modifiers: .option)
+                })).configuredNativeShortcut("p", modifiers: .option)
                 Spacer()
-                Button("重置") { edit?.sampleMode = nil; update { $0 = LevelsSettings() } }
+                Button("Reset") { edit?.sampleMode = nil; update { $0 = LevelsSettings() } }
             }
-            Text(session.adjustmentOriginal != nil ? "下方像素 · Alpha 加权直方图" : session.selection == nil ? "原始像素 · Alpha 加权直方图" : "原始像素 · 选区与 Alpha 加权直方图")
+            Text(session.adjustmentOriginal != nil ? "Underlying pixels · alpha-weighted histogram" : session.selection == nil ? "Original pixels · alpha-weighted histogram" : "Original pixels · selection and alpha-weighted histogram")
                 .font(.caption).foregroundStyle(.secondary)
             Divider()
             HStack {
-                Button("取消") { session.cancelLevels() }.keyboardShortcut(.cancelAction)
+                Button("取消") { session.cancelLevels() }.configuredNativeShortcut(.escape)
                 Spacer()
                 if edit?.committing == true { ProgressView().controlSize(.small) }
                 Button("好") { Task { await session.commitLevels() } }
-                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                    .configuredNativeShortcut(.return).buttonStyle(.borderedProminent)
             }
         }
         .padding(24).frame(width: 440).fixedSize()
@@ -91,16 +91,7 @@ struct LevelsSheet: View {
             Text(name).font(.caption).foregroundStyle(.secondary)
             TextField(name, value: binding, format: .number.precision(.fractionLength(decimals)))
                 .textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing).frame(width: 80)
-                .accessibilityIdentifier("levels" + ({
-                    switch name {
-                    case "输入黑色": "InputBlack"
-                    case "伽马": "Gamma"
-                    case "输入白色": "InputWhite"
-                    case "输出黑色": "OutputBlack"
-                    case "输出白色": "OutputWhite"
-                    default: name.filter { $0.isASCII && ($0.isLetter || $0.isNumber) }
-                    }
-                }()))
+                .accessibilityIdentifier("levels\(name.replacingOccurrences(of: " ", with: ""))")
         }
     }
     private var histogram: some View {
@@ -116,15 +107,15 @@ struct LevelsSheet: View {
             }
             let color: Color = switch settings.channel { case .rgb: .gray; case .red: .red; case .green: .green; case .blue: .blue }
             context.fill(path, with: .color(color))
-        }.accessibilityLabel("原始\(settings.channel.displayName)直方图")
-        .help("线性直方图，纵向自动缩放。高峰可能超出图框；0 到 255 的全部色调仍被包含。")
+        }.accessibilityLabel("Original \(settings.channel.rawValue) histogram")
+        .help("Linear histogram with automatic vertical scaling. Tall spikes may extend beyond the graph; all tones from 0 to 255 remain included.")
     }
     private func handles(output: Bool) -> some View {
         GeometryReader { geometry in
             let gammaPosition = current.black + (current.white - current.black) * pow(0.5, current.gamma)
             let positions = output ? [current.outputBlack, current.outputWhite] : [current.black, gammaPosition, current.white]
             ForEach(positions.indices, id: \.self) { index in
-                let names = output ? ["输出黑色", "输出白色"] : ["输入黑色", "伽马", "输入白色"]
+                let names = output ? ["Output black", "Output white"] : ["Input black", "Gamma", "Input white"]
                 Image(systemName: "triangle.fill").font(.system(size: 12))
                     .foregroundStyle(index == 0 ? Color.black : index == positions.count - 1 ? .white : .gray)
                     .shadow(color: .gray, radius: 0.5)

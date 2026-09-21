@@ -17,27 +17,27 @@ struct NewCanvasSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("新建画布").font(.title2.weight(.semibold))
-                Text("为下一次合成准备的空白画布。").foregroundStyle(.secondary)
+                Text("New canvas").font(.title2.weight(.semibold))
+                Text("A blank space for your next composition.").foregroundStyle(.secondary)
             }
             HStack(spacing: 16) {
-                dimension("宽度", text: $width, field: .width)
+                dimension("Width", text: $width, field: .width)
                 Image(systemName: "multiply").foregroundStyle(.tertiary).padding(.top, 20)
-                dimension("高度", text: $height, field: .height)
+                dimension("Height", text: $height, field: .height)
             }
-            Text(valid ? "透明画布 · sRGB" : "请输入 1 到 30,000 像素的整数。")
+            Text(valid ? "Transparent canvas · sRGB" : "Enter whole numbers from 1 to 30,000 pixels.")
                 .font(.callout).foregroundStyle(valid ? Color.secondary : Color.orange)
             HStack(spacing: 10) {
-                Button("打开项目") { onOpen?() }.buttonStyle(.bordered)
-                Button("导入图像") { session.showsImporter = true }.buttonStyle(.bordered)
+                Button("Open project") { onOpen?() }.buttonStyle(.bordered)
+                Button("Import image") { session.showsImporter = true }.buttonStyle(.bordered)
                 Spacer()
-                Button("创建画布") {
+                Button("Create canvas") {
                     guard let w = CanvasDocument.validDimension(width),
                           let h = CanvasDocument.validDimension(height) else { return }
                     if let onCreate { onCreate(w, h) }
                     else { session.createDocument(width: w, height: h, emptyLayer: true) }
                 }
-                .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                .configuredNativeShortcut(.return).buttonStyle(.borderedProminent)
                 .disabled(!valid).accessibilityIdentifier("createCanvas")
             }
         }

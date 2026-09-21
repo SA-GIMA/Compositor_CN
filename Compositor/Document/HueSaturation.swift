@@ -21,16 +21,6 @@ nonisolated enum ColorRange: String, CaseIterable, Sendable, Hashable, Codable {
     static let colorRanges = ColorRange.allCases.filter { $0 != .master }
 }
 
-extension HueSampleMode {
-    nonisolated var displayName: String {
-        switch self {
-        case .replace: "取样"
-        case .add: "添加"
-        case .remove: "移除"
-        }
-    }
-}
-
 extension ColorRange {
     nonisolated var displayName: String {
         switch self {
@@ -176,6 +166,17 @@ nonisolated enum HueSampleMode: String, CaseIterable, Sendable {
         }
     }
 }
+
+extension HueSampleMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .replace: "取样"
+        case .add: "添加"
+        case .remove: "减去"
+        }
+    }
+}
+
 
 /// A targeted-adjustment drag in progress.
 struct HueTargetDrag {

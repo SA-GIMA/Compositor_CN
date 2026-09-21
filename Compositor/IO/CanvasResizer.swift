@@ -14,7 +14,8 @@ actor CanvasResizer {
         }
         guard options.width != old.width || options.height != old.height || offset != .zero else { return snapshot }
         var manifest = ProjectManifest(resolution: old.resolution, documentID: old.documentID,
-            width: options.width, height: options.height, activeLayerID: old.activeLayerID, layers: [])
+            width: options.width, height: options.height, activeLayerID: old.activeLayerID, layers: [],
+            guides: old.guides?.map { $0.offset(x: offset.x, y: offset.y) })
         for layer in old.layers {
             var transform = layer.transform
             transform.origin.x += offset.x
@@ -27,7 +28,7 @@ actor CanvasResizer {
                     moved.origin.x += offset.x
                     moved.origin.y += offset.y
                     return moved
-                }, maskLinked: layer.maskLinked, shape: layer.shape))
+                }, maskLinked: layer.maskLinked, shape: layer.shape, text: layer.text))
         }
         var images = snapshot.images
         // A colored extension is separate bottom-layer content. The old canvas
@@ -59,11 +60,11 @@ actor CanvasResizer {
                 thumb.interpolationQuality = .high
                 thumb.draw(image, in: CGRect(x: 0, y: 0, width: tw, height: th))
                 guard let thumbnail = thumb.makeImage() else { throw ExportError.render }
-                return ImportedImage(image: image, thumbnail: thumbnail, name: "画布扩展")
+                return ImportedImage(image: image, thumbnail: thumbnail, name: "Canvas Extension")
             }
             let id = UUID()
             images[id] = asset
-            manifest.layers.insert(ProjectLayerRecord(id: id, name: "画布扩展", isVisible: true,
+            manifest.layers.insert(ProjectLayerRecord(id: id, name: "Canvas Extension", isVisible: true,
                 transform: LayerTransform(origin: .zero, size: CGSize(width: options.width, height: options.height)),
                 imageFile: "\(id.uuidString).png"), at: 0)
         }

@@ -21,8 +21,8 @@ struct ColorPaletteControls: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .offset(x: swatchSize + 3, y: -3)
-            .help("交换前景色与背景色（X）")
-            .accessibilityLabel("交换颜色")
+            .help("Swap foreground and background (X)")
+            .accessibilityLabel("Swap colors")
             Button { session.resetPaletteColors() } label: {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 7.5, weight: .medium))
@@ -32,17 +32,17 @@ struct ColorPaletteControls: View {
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .offset(x: -1, y: swatchSize + 3)
-            .help("默认颜色（D）")
-            .accessibilityLabel("默认颜色")
+            .help("Default colors (D)")
+            .accessibilityLabel("Default colors")
         }
         .frame(width: swatchSize + swatchOffset, height: swatchSize + swatchOffset, alignment: .topLeading)
         .disabled(!session.canEditPalette)
         .popover(isPresented: Binding(get: { choosingMaskBackground != nil }, set: { if !$0 { choosingMaskBackground = nil } })) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(choosingMaskBackground == true ? "蒙版背景色" : "蒙版前景色").font(.headline)
+                Text(choosingMaskBackground == true ? "Mask background" : "Mask foreground").font(.headline)
                 HStack {
-                    Button("黑色 · 隐藏") { chooseMask(.black) }
-                    Button("白色 · 显示") { chooseMask(.white) }
+                    Button("Black · Hide") { chooseMask(.black) }
+                    Button("White · Reveal") { chooseMask(.white) }
                 }
             }.padding(16)
         }
@@ -56,7 +56,7 @@ struct ColorPaletteControls: View {
         }
     }
     private func swatch(background: Bool) -> some View {
-        let label = background ? "背景色" : "前景色"
+        let label = background ? "Background color" : "Foreground color"
         let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
         return Button {
             if session.isMaskSelected { choosingMaskBackground = background }

@@ -23,7 +23,7 @@ struct HueSaturationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Picker("色域", selection: settings.range) {
+                Picker("Range", selection: settings.range) {
                     ForEach(ColorRange.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
                 .pickerStyle(.menu).frame(width: 160).labelsHidden().disabled(current.colorize)
@@ -35,7 +35,7 @@ struct HueSaturationSheet: View {
             slider("明度", value: settings.lightness, range: -100...100, unit: "")
             if showsSpectrum {
                 SpectrumEditor(settings: settings)
-                Toggle("改为应用在此色域之外", isOn: settings.invertRange)
+                Toggle("改为应用于该色域之外", isOn: settings.invertRange)
             }
             HStack(spacing: 18) {
                 Toggle("着色", isOn: Binding(get: { current.colorize }, set: { colorize in
@@ -47,14 +47,14 @@ struct HueSaturationSheet: View {
                 Spacer()
             }
             if session.adjustmentOriginal == nil && session.selection != nil {
-                Text("仅限选区").font(.callout).foregroundStyle(.secondary)
+                Text("仅限当前选区").font(.callout).foregroundStyle(.secondary)
             }
             Divider()
             HStack {
-                Button("取消") { session.cancelHueSaturation() }.keyboardShortcut(.cancelAction)
+                Button("取消") { session.cancelHueSaturation() }.configuredNativeShortcut(.escape)
                 Spacer()
                 Button("好") { Task { await session.commitHueSaturation() } }
-                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+                    .configuredNativeShortcut(.return).buttonStyle(.borderedProminent)
             }
         }
         .padding(24).frame(width: 460).fixedSize()
@@ -90,7 +90,7 @@ struct HueSaturationSheet: View {
                 .buttonStyle(.plain)
                 .background(session.hueTargeting ? Color.accentColor.opacity(0.25) : .clear,
                             in: RoundedRectangle(cornerRadius: 4))
-                .help("定向调整：在图像上拖动以改变该颜色的饱和度；按住 Command 则改变色相")
+                .help("定向调整：在图像上拖动以改变该颜色的饱和度；按住 Command 则调整色相")
                 .accessibilityLabel("定向调整")
             }
         }

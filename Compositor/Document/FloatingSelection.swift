@@ -33,7 +33,7 @@ extension EditorSession {
         } catch { brushError = error.localizedDescription; return }
         let before = document, beforeActive = activeLayerID
         // Outer edit: closed by commitTransform (merge) or cancelTransform (restore).
-        beginEdit("变换选区")
+        beginEdit("Transform Selection")
         await clearSelectedPixels()
         guard let index = self.document?.layers.firstIndex(where: { $0.id == source.id }),
               let thumbnail = try? PixelInvert.thumbnail(of: lifted.image) else {
@@ -84,13 +84,13 @@ extension EditorSession {
                 moved = selection.flatMap { selection in
                     DistortWarp.mapPath(selection.path, pixelToDocument: placement, pixelSize: floating.pixelSize,
                                         transform: edit.draft, corners: corners)
-                        .map { DocumentSelection(path: $0, antialiased: selection.antialiased) }
+                        .map { DocumentSelection(path: $0, antialiased: selection.antialiased, feather: selection.feather) }
                 }
             } else {
                 moved = floatingSelectionTransform(edit).flatMap { transform -> DocumentSelection? in
                     var matrix = transform
                     guard let selection, let path = selection.path.copy(using: &matrix) else { return nil }
-                    return DocumentSelection(path: path, antialiased: selection.antialiased)
+                    return DocumentSelection(path: path, antialiased: selection.antialiased, feather: selection.feather)
                 }
             }
             document?.layers.removeAll { $0.id == edit.layerID }

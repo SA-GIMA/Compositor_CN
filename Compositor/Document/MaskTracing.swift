@@ -5,6 +5,9 @@ nonisolated enum MaskTracing {
     /// Outline of a mask's pixels darker than 50% gray.
     static func darkPixels(in image: CGImage) -> CGPath? { trace(image, alpha: false) { $0 < 128 } }
 
+    /// Outline of a mask's pixels lighter than 50% gray — what a mask shows.
+    static func whitePixels(in image: CGImage) -> CGPath? { trace(image, alpha: false) { $0 >= 128 } }
+
     /// Outline of an image's pixels that are at least 50% opaque.
     static func opaquePixels(in image: CGImage) -> CGPath? { trace(image, alpha: true) { $0 >= 128 } }
 
@@ -76,7 +79,7 @@ extension EditorSession {
         guard let traced = MaskTracing.darkPixels(in: mask) else { NSSound.beep(); return }
         var toDocument = BrushRaster.pixelToDocument(layer.maskTransform, width: mask.width, height: mask.height)
         guard let outline = traced.copy(using: &toDocument) else { return }
-        applySelection(outline, mode: mode, name: "载入蒙版选区")
+        applySelection(outline, mode: mode, name: "Load Mask Selection")
     }
 
     /// Cmd-click on a layer thumbnail: the layer's visible (≥ 50% opaque) pixels become
@@ -87,6 +90,6 @@ extension EditorSession {
         guard let traced = MaskTracing.opaquePixels(in: image) else { NSSound.beep(); return }
         var toDocument = BrushRaster.pixelToDocument(layer.transform, width: image.width, height: image.height)
         guard let outline = traced.copy(using: &toDocument) else { return }
-        applySelection(outline, mode: mode, name: "载入图层选区")
+        applySelection(outline, mode: mode, name: "Load Layer Selection")
     }
 }

@@ -90,13 +90,80 @@ final class TransformOverlay: NSView {
     var antsPhase: CGFloat = 0
 
     override func draw(_ dirtyRect: NSRect) {
+        drawLayoutGrid()
+        drawGuides()
         if session.tool == .crop { drawCrop() }
         else if let line = gradientLine { drawGradientLine(line) }
         else { drawTransformHandles() }
         drawSelection()
         drawLassoDraft()
-        drawShapeDraft()
         drawSnapGuides()
+    }
+
+    /// Non-printing layout grid over the document: solid majors every 64 px, dotted 8 px subdivisions.
+    private func drawLayoutGrid() {
+        guard session.showsGrid, let document = session.document, let transform = documentToView,
+              let context = NSGraphicsContext.current?.cgContext else { return }
+        let size = document.size
+        let scale = session.viewport.pointsPerPixel
+        let hairline = 1 / max(session.viewport.backingScale, 1)
+        let subdivisionGap = LayoutGrid.step * scale
+        context.saveGState()
+        context.concatenate(transform)
+        context.setLineWidth(hairline / max(scale, 0.0001))
+        context.setStrokeColor(NSColor(white: 0.55, alpha: 0.28).cgColor)
+        if subdivisionGap >= 4 {
+            context.setLineDash(phase: 0, lengths: [1 / max(scale, 0.0001), 2 / max(scale, 0.0001)])
+            let path = CGMutablePath()
+            for x in LayoutGrid.lines(along: size.width) where !LayoutGrid.isMajor(x) {
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            for y in LayoutGrid.lines(along: size.height) where !LayoutGrid.isMajor(y) {
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.addPath(path)
+            context.strokePath()
+        }
+        context.setLineDash(phase: 0, lengths: [])
+        context.setStrokeColor(NSColor(white: 0.7, alpha: 0.45).cgColor)
+        let majors = CGMutablePath()
+        for x in LayoutGrid.lines(along: size.width) where LayoutGrid.isMajor(x) {
+            majors.move(to: CGPoint(x: x, y: 0))
+            majors.addLine(to: CGPoint(x: x, y: size.height))
+        }
+        for y in LayoutGrid.lines(along: size.height) where LayoutGrid.isMajor(y) {
+            majors.move(to: CGPoint(x: 0, y: y))
+            majors.addLine(to: CGPoint(x: size.width, y: y))
+        }
+        context.addPath(majors)
+        context.strokePath()
+        context.restoreGState()
+    }
+
+    /// User guides span the whole view, including the pasteboard.
+    private func drawGuides() {
+        guard session.showsGuides, let document = session.document,
+              let context = NSGraphicsContext.current?.cgContext else { return }
+        let guides = session.displayedGuides
+        guard !guides.isEmpty else { return }
+        context.saveGState()
+        context.setStrokeColor(EditorSession.guideColor)
+        context.setLineWidth(1 / max(session.viewport.backingScale, 1))
+        for guide in guides {
+            if guide.axis == .vertical {
+                let x = session.viewport.viewPoint(from: CGPoint(x: guide.position, y: 0), documentSize: document.size).x
+                context.move(to: CGPoint(x: x, y: 0))
+                context.addLine(to: CGPoint(x: x, y: bounds.height))
+            } else {
+                let y = session.viewport.viewPoint(from: CGPoint(x: 0, y: guide.position), documentSize: document.size).y
+                context.move(to: CGPoint(x: 0, y: y))
+                context.addLine(to: CGPoint(x: bounds.width, y: y))
+            }
+        }
+        context.strokePath()
+        context.restoreGState()
     }
 
     /// While a move is snapped, a line along what it lined up with, across the whole canvas.
@@ -142,22 +209,6 @@ final class TransformOverlay: NSView {
         context.restoreGState()
     }
 
-    /// The shape being dragged, filled with the color it will get and outlined so it reads on any background.
-    private func drawShapeDraft() {
-        guard let draft = session.shapeDraft, !draft.rect.isEmpty, let transform = documentToView,
-              let context = NSGraphicsContext.current?.cgContext else { return }
-        let rect = draft.rect.applying(transform)
-        let path = draft.kind.path(in: rect, cornerRadius: draft.cornerRadius * session.viewport.pointsPerPixel)
-        context.saveGState()
-        context.addPath(path)
-        context.setFillColor(session.foregroundColor.nsColor.cgColor)
-        context.fillPath()
-        context.addPath(path)
-        context.setStrokeColor(NSColor.black.withAlphaComponent(0.6).cgColor)
-        context.setLineWidth(1)
-        context.strokePath()
-        context.restoreGState()
-    }
 
     private func drawLassoDraft() {
         guard let draft = session.lassoDraft, let transform = documentToView,
@@ -203,10 +254,7 @@ final class TransformOverlay: NSView {
             path.move(to: geometry.handles[1])
             path.addLine(to: geometry.rotationHandle)
         }
-        context.addPath(path)
-        context.setStrokeColor(NSColor.black.withAlphaComponent(0.7).cgColor)
-        context.setLineWidth(3)
-        context.strokePath()
+        // Just the accent line: a dark line behind it read as a grey halo around the box.
         context.addPath(path)
         context.setStrokeColor(NSColor.controlAccentColor.cgColor)
         context.setLineWidth(1)

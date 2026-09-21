@@ -116,7 +116,7 @@ extension EditorSession {
         guard let edit = gradientEdit, !isProjectBusy else { return }
         guard edit.hasLine else { cancelGradient(); return }
         do {
-            try await commitRasterEdit(edit.raster, name: edit.raster.isMask ? "渐变蒙版" : "渐变")
+            try await commitRasterEdit(edit.raster, name: edit.raster.isMask ? "Gradient Mask" : "Gradient")
         } catch { brushError = error.localizedDescription }
         if gradientEdit === edit { cancelGradient() }
     }

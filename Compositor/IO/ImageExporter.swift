@@ -7,7 +7,7 @@ nonisolated enum ExportError: LocalizedError {
     case tooLarge, render, encode
     var errorDescription: String? {
         switch self {
-        case .tooLarge: "图像导出最高支持 1 亿像素、每边 30,000 像素的画布。"
+        case .tooLarge: "Image export supports canvases up to 100 megapixels and 30,000 pixels per side."
         case .render: "The canvas could not be rendered. Try a smaller canvas."
         case .encode: "The image could not be encoded."
         }
@@ -39,10 +39,18 @@ actor ImageExporter {
             try LiveMaskGraph.validate(snapshot.manifest.layers)
             let live = LiveMaskRenderer(bounds: CGRect(x: 0, y: 0, width: width, height: height), source: { records[$0]?.maskSourceID }) { id, target in
                 guard let layer = records[id], let image = snapshot.images[id]?.image else { return }
+                let opacity = layer.effectiveOpacity(in: records)
                 let mask = snapshot.mask(for: layer).flatMap { $0.clipImage(placement: $0.placement, over: layer.transform, width: image.width, height: image.height) }
+                let effects = LayerEffectsRenderer.cached(image, mask: mask, effects: layer.effects)
                 func drawLayer(_ mode: LayerBlendMode, _ into: CGContext) {
+                    if let effects {
+                        let grown = LayerEffectsRenderer.placed(layer.transform, image: effects.image, inset: effects.inset)
+                        LayerRenderer.draw(effects.image, transform: grown, center: grown.center,
+                            opacity: opacity, blendMode: mode, mask: nil, in: into)
+                        return
+                    }
                     LayerRenderer.draw(image, transform: layer.transform, center: layer.transform.center,
-                        opacity: layer.opacity ?? 1, blendMode: mode, mask: mask, in: into)
+                        opacity: opacity, blendMode: mode, mask: mask, in: into)
                 }
                 let mode = layer.blendMode ?? .normal
                 // Core Graphics blends these two wrong; see SeparableBlend.
@@ -50,7 +58,7 @@ actor ImageExporter {
                 drawLayer(mode, target)
             }
             live.adjustment = { records[$0]?.adjustment }
-            live.adjustmentOpacity = { records[$0]?.opacity ?? 1 }
+            live.adjustmentOpacity = { records[$0]?.effectiveOpacity(in: records) ?? 1 }
             live.adjustmentClip = { id, ctx in
                 if let layer = records[id], let image = snapshot.mask(for: layer)?.enabledImage {
                     FolderMaskClip(image: image, transform: layer.transform).apply(center: layer.transform.center, in: ctx)

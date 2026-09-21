@@ -172,6 +172,71 @@ extension ShapeKind {
         switch self {
         case .rectangle: "矩形"
         case .ellipse: "椭圆"
+        case .line: "直线"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/HueSaturation.swift",
+        "nonisolated enum ColorRange: String, CaseIterable, Sendable, Hashable, Codable {",
+        """
+extension ColorRange {
+    nonisolated var displayName: String {
+        switch self {
+        case .master: "全图"
+        case .reds: "红色"
+        case .yellows: "黄色"
+        case .greens: "绿色"
+        case .cyans: "青色"
+        case .blues: "蓝色"
+        case .magentas: "洋红"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/Selection.swift",
+        "nonisolated enum WandMode: String, CaseIterable, Sendable {",
+        """
+extension WandMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .wand: "魔棒"
+        case .object: "对象"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/LayerEffects.swift",
+        "nonisolated enum LayerEffectKind: String, CaseIterable, Sendable {",
+        """
+extension LayerEffectKind {
+    nonisolated var displayName: String {
+        switch self {
+        case .stroke: "描边"
+        case .shadow: "投影"
+        case .colorOverlay: "颜色叠加"
+        case .innerShadow: "内阴影"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/HueSaturation.swift",
+        "nonisolated enum HueSampleMode: String, CaseIterable, Sendable {",
+        """
+extension HueSampleMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .replace: "取样"
+        case .add: "添加"
+        case .remove: "减去"
         }
     }
 }
@@ -233,6 +298,7 @@ extension LayerBlendMode {
         case .multiply: "正片叠底"
         case .screen: "滤色"
         case .overlay: "叠加"
+        case .softLight: "柔光"
         case .darken: "变暗"
         case .lighten: "变亮"
         case .difference: "差值"
@@ -242,6 +308,36 @@ extension LayerBlendMode {
         case .saturation: "饱和度"
         case .color: "颜色"
         case .luminosity: "明度"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/LevelsAutomatic.swift",
+        "nonisolated enum LevelsSample: String, CaseIterable { case black = \"Black\", gray = \"Gray\", white = \"White\" }",
+        """
+extension LevelsSample {
+    nonisolated var displayName: String {
+        switch self {
+        case .black: "黑色"
+        case .gray: "灰色"
+        case .white: "白色"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/BrushStroke.swift",
+        "nonisolated enum SpotHealingMode: String, CaseIterable, Sendable, Hashable {",
+        """
+extension SpotHealingMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .contentAware: "内容识别"
+        case .createTexture: "创建纹理"
+        case .proximityMatch: "近似匹配"
         }
     }
 }
@@ -262,45 +358,8 @@ FILE_PAIRS: dict[str, list[tuple[str, str]]] = {
         ),
         ('name: "Magic Wand")', 'name: "魔棒")'),
     ],
-    "Document/LevelsAutomatic.swift": [
-        (
-            'nonisolated enum LevelsSample: String, CaseIterable { case black = "Black", gray = "Gray", white = "White" }',
-            '''nonisolated enum LevelsSample: String, CaseIterable { case black = "Black", gray = "Gray", white = "White" }
-extension LevelsSample {
-    nonisolated var displayName: String {
-        switch self {
-        case .black: "黑色"
-        case .gray: "灰色"
-        case .white: "白色"
-        }
-    }
-}''',
-        ),
-    ],
-    "Document/BrushStroke.swift": [
-        (
-            """nonisolated enum SpotHealingMode: String, CaseIterable, Sendable, Hashable {
-    case contentAware = "Content-Aware"
-    case createTexture = "Create Texture"
-    case proximityMatch = "Proximity Match"
-}""",
-            """nonisolated enum SpotHealingMode: String, CaseIterable, Sendable, Hashable {
-    case contentAware = "Content-Aware"
-    case createTexture = "Create Texture"
-    case proximityMatch = "Proximity Match"
-}
-
-extension SpotHealingMode {
-    nonisolated var displayName: String {
-        switch self {
-        case .contentAware: "内容识别"
-        case .createTexture: "创建纹理"
-        case .proximityMatch: "近似匹配"
-        }
-    }
-}""",
-        ),
-    ],
+    "Document/LevelsAutomatic.swift": [],
+    "Document/BrushStroke.swift": [],
     "Document/ColorPalette.swift": [
         (
             'case .palette(let background): return background ? "Color Picker (Background Color)" : "Color Picker (Foreground Color)"',
@@ -359,6 +418,7 @@ extension SpotHealingMode {
         ('beginEdit("Import Images")', 'beginEdit("导入图像")'),
         ('beginEdit("Import Image")', 'beginEdit("导入图像")'),
         ('beginEdit("New Canvas")', 'beginEdit("新建画布")'),
+        ('beginEdit("Duplicate Layers")', 'beginEdit("复制图层")'),
         ('beginEdit("Duplicate Layer")', 'beginEdit("复制图层")'),
         ('beginEdit("Transform Layers")', 'beginEdit("变换图层")'),
         ('beginEdit("Transform Layer")', 'beginEdit("变换图层")'),
@@ -367,6 +427,10 @@ extension SpotHealingMode {
         (
             'var label: String { self == .eyedropper ? "Eyedropper (I)"',
             'var label: String { self == .eyedropper ? "吸管（I）"',
+        ),
+        (
+            'self == .shape ? "Shape (U)· Shift-U to switch Rectangle/Ellipse"',
+            'self == .shape ? "形状（U）· Shift-U 切换矩形/椭圆/直线"',
         ),
     ],
     "Document/Crop.swift": [
@@ -377,6 +441,8 @@ extension SpotHealingMode {
         ('editName: "Paste"', 'editName: "粘贴"'),
         ('editName: "Layer via Copy"', 'editName: "通过拷贝新建图层"'),
         ('"Layer \\(number)"', '"图层 \\(number)"'),
+        ('beginEdit("Duplicate Layers")', 'beginEdit("复制图层")'),
+        ('beginEdit("Duplicate Layer")', 'beginEdit("复制图层")'),
     ],
     "Document/Selection.swift": [
         ('"Expand Selection"', '"扩展选区"'),
@@ -526,6 +592,129 @@ extension SpotHealingMode {
         ('Text("Layers")', 'Text("图层")'),
         ('Text("No layers yet")', 'Text("尚无图层")'),
         ('Button(kind.rawValue) { session.addAdjustment(kind) }', 'Button(kind.displayName) { session.addAdjustment(kind) }'),
+        (
+            'Text(session.document == nil ? "Create a canvas or import an image." : "Import an image or add a blank layer.")',
+            'Text(session.document == nil ? "创建画布或导入图像。" : "导入图像，或添加空白图层。")',
+        ),
+        ('.help("New blank layer (⇧⌘N)").accessibilityLabel("New blank layer")',
+         '.help("新建空白图层（⇧⌘N）").accessibilityLabel("新建空白图层")'),
+        ('.help("Group selected layers (⌘G)").accessibilityLabel("New folder")',
+         '.help("编组所选图层（⌘G）").accessibilityLabel("新建文件夹")'),
+        ('.help("Layer effects: stroke and drop shadow").accessibilityLabel("Layer effects")',
+         '.help("图层效果：描边与投影").accessibilityLabel("图层效果")'),
+        ('.menuStyle(.borderlessButton).fixedSize().help("New adjustment layer")',
+         '.menuStyle(.borderlessButton).fixedSize().help("新建调整图层")'),
+        ('session.selectedEffect != nil ? "Delete selected effect" : session.isMaskSelected ? "Delete layer mask" : session.selectedLayerIDs.count > 1 ? "Delete selected layers" : "Delete selected layer"',
+         'session.selectedEffect != nil ? "删除所选效果" : session.isMaskSelected ? "删除图层蒙版" : session.selectedLayerIDs.count > 1 ? "删除所选图层" : "删除所选图层"'),
+    ],
+    "UI/LassoControls.swift": [
+        ('Text(session.tool == .marquee ? "Marquee" : session.tool == .wand ? "Magic" : "Lasso")',
+         'Text(session.tool == .marquee ? "选框" : session.tool == .wand ? "魔棒" : "套索")'),
+        ('.help("Press M to switch between Rectangle and Ellipse")',
+         '.help("按 M 在矩形与椭圆之间切换")'),
+        ('.help("Press Tab to switch between Wand and Object")',
+         '.help("按 Tab 在魔棒与对象之间切换")'),
+        ('.help("Press L to switch between Freehand and Polygonal")',
+         '.help("按 L 在套索与多边形套索之间切换")'),
+        ('.help("Hold Shift to add or Option to subtract for one outline")',
+         '.help("按住 Shift 添加或 Option 减去轮廓")'),
+        ('.help(session.tool == .wand && session.wandMode == .object ? "Smooth the detected object outline; turn off for the raw pixel mask" : "Smooth selection edges; turn off for hard pixel edges")',
+         '.help(session.tool == .wand && session.wandMode == .object ? "平滑检测到的对象轮廓；关闭则使用原始像素蒙版" : "平滑选区边缘；关闭则边缘更锐利")'),
+        ('modifyControl("Expand", amount: $session.selectionExpandAmount)',
+         'modifyControl("扩展", amount: $session.selectionExpandAmount)'),
+        ('modifyControl("Contract", amount: $session.selectionContractAmount)',
+         'modifyControl("收缩", amount: $session.selectionContractAmount)'),
+        ('.help("Fade the edge of the selection by this many pixels")',
+         '.help("按该像素数羽化选区边缘")'),
+        ('if selection.isEmpty { Text("Empty selection")',
+         'if selection.isEmpty { Text("空选区")'),
+        ('Button("Deselect") { session.deselect() }',
+         'Button("取消选择") { session.deselect() }'),
+        ('Toggle("Anti-alias", isOn: $session.selectionAntialiased)',
+         'Toggle("抗锯齿", isOn: $session.selectionAntialiased)'),
+        ('Button("Feather") { session.featherSelection(by: session.selectionFeatherAmount) }',
+         'Button("羽化") { session.featherSelection(by: session.selectionFeatherAmount) }'),
+        ('Text("Tolerance")', 'Text("容差")'),
+        ('TextField("Tolerance"', 'TextField("容差"'),
+        ('.help("How far each color channel (0–255) can differ from the clicked color and still be selected")',
+         '.help("各颜色通道相对点击色可容许的差值（0–255）")'),
+        ('Text("This Layer").tag(false)', 'Text("当前图层").tag(false)'),
+        ('Text("All Layers").tag(true)', 'Text("所有图层").tag(true)'),
+        ('.help("Match the clicked pixel, or the average of the pixels around it")',
+         '.help("匹配点击像素，或周围像素的平均值")'),
+        ('.help("Read colors from the active layer only, or from every visible layer as shown")',
+         '.help("仅从当前图层读取颜色，或从所有可见图层读取")'),
+        ('.help("Analyze the active layer only, or every visible layer as shown")',
+         '.help("仅分析当前图层，或分析所有可见图层")'),
+        ('Toggle("Contiguous", isOn: $session.wandSettings.contiguous)',
+         'Toggle("连续", isOn: $session.wandSettings.contiguous)'),
+        ('.help("Select only similar pixels connected to the one you click; off selects them everywhere")',
+         '.help("仅选择与点击处相连的相似像素；关闭则全图选取")'),
+        ('Text("Edge")', 'Text("边缘")'),
+        ('TextField("Edge"', 'TextField("边缘"'),
+        ('.help("Positive values tighten the detected mask inward; negative values expand it outward")',
+         '.help("正值将检测蒙版向内收紧，负值向外扩展")'),
+        ('.help("\\(title) the selection by this many pixels")',
+         '.help("按该像素数\\(title)选区")'),
+    ],
+    "UI/HueSaturationSheet.swift": [
+        ('Toggle("Apply outside this range instead", isOn: settings.invertRange)',
+         'Toggle("改为应用于该色域之外", isOn: settings.invertRange)'),
+        ('Text("Limited to the selection")', 'Text("仅限当前选区")'),
+        ('slider("Hue", value: settings.hue, range: hueRange, unit: "°")',
+         'slider("色相", value: settings.hue, range: hueRange, unit: "°")'),
+        ('slider("Saturation", value: settings.saturation, range: saturationRange, unit: "")',
+         'slider("饱和度", value: settings.saturation, range: saturationRange, unit: "")'),
+        ('slider("Lightness", value: settings.lightness, range: -100...100, unit: "")',
+         'slider("明度", value: settings.lightness, range: -100...100, unit: "")'),
+        ('Toggle("Colorize", isOn:', 'Toggle("着色", isOn:'),
+        ('Toggle("Preview", isOn: preview)', 'Toggle("预览", isOn: preview)'),
+        ('Button("Reset") { settings.wrappedValue', 'Button("重置") { settings.wrappedValue'),
+        ('.help("Targeted adjustment: drag on the image to change that color\'s saturation, or its hue with Command held")',
+         '.help("定向调整：在图像上拖动以改变该颜色的饱和度；按住 Command 则调整色相")'),
+        ('.accessibilityLabel("Targeted adjustment")', '.accessibilityLabel("定向调整")'),
+        ('.accessibilityLabel("\\(mode.rawValue) color")', '.accessibilityLabel("\\(mode.displayName)颜色")'),
+    ],
+    "UI/FilterSheet.swift": [
+        ('Text("Limited to the selection")', 'Text("仅限当前选区")'),
+        ('Toggle("Preview", isOn:', 'Toggle("预览", isOn:'),
+        ('Toggle("Reverse", isOn: $settings.reversed)', 'Toggle("反向", isOn: $settings.reversed)'),
+        ('Toggle("Monochromatic", isOn: flag(\\.monochromatic))',
+         'Toggle("单色", isOn: flag(\\.monochromatic))'),
+        ('Text("Uniform").tag(false)', 'Text("平均分布").tag(false)'),
+        ('Text("Gaussian").tag(true)', 'Text("高斯分布").tag(true)'),
+        (
+            'Text("Hide the background behind a layer mask, keeping the foreground subjects. The pixels stay, so the background can be painted back at any time.")',
+            'Text("在图层蒙版后隐藏背景，保留前景主体。像素仍在，随时可把背景画回来。")',
+        ),
+        (
+            '.help("Basic is quick; Advanced refines the mask against the layer\'s own detail, for hair and fur")',
+            '.help("基础速度快；高级会对照图层细节优化蒙版，适合毛发")',
+        ),
+        ('.help("Pull the mask onto the image\'s own edges, which recovers hair and fur")',
+         '.help("将蒙版对齐图像边缘，有助于恢复毛发")'),
+        ('.help("Clear the haze that leaves background showing through thin areas")',
+         '.help("清除薄处透出背景的雾感")'),
+        ('.help("Shrink the mask to drop the rim of background color around the subject, or grow it")',
+         '.help("收缩蒙版以去掉主体周围的背景色边缘，或向外扩展")'),
+        ('Text("Fill the selection using surrounding pixels from this layer.")',
+         'Text("使用本图层周围像素填充选区。")'),
+        (
+            'Text("Positive straightens lines that bow outward (barrel); negative, lines that bow inward (pincushion).")',
+            'Text("正值矫正向外弯曲的线条（桶形）；负值矫正向内弯曲的线条（枕形）。")',
+        ),
+        ('.help("Choose the \\(title.lowercased()) color")',
+         '.help("选择\\(title)颜色")'),
+    ],
+    "UI/NativeLayerList.swift": [
+        ('ids.count > 1 ? "Duplicate Layers" : "Duplicate Layer"',
+         'ids.count > 1 ? "复制图层" : "复制图层"'),
+        ('ids.count > 1 ? "Move Layers" : "Move Layer"',
+         'ids.count > 1 ? "移动图层" : "移动图层"'),
+    ],
+    "CompositorApp.swift": [
+        ('Button(session.selection == nil ? "Duplicate Layer" : "Layer via Copy")',
+         'Button(session.selection == nil ? "复制图层" : "通过拷贝新建图层")'),
     ],
     "UI/CropControls.swift": [
         ('["Free", "Original"', '["自由", "原始"'),
@@ -566,28 +755,46 @@ GLOBAL_PAIRS: list[tuple[str, str]] = [
 ]
 
 
-def inject_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
-    text = path.read_text(encoding="utf-8")
-    marker = extension_code.strip().splitlines()[0]
-    if marker in text:
-        return False
-    idx = text.find(enum_sig)
-    if idx < 0:
-        return False
-    brace = text.find("{", idx)
+def _find_block_end(text: str, brace: int) -> int | None:
     depth = 0
-    end = None
     for i in range(brace, len(text)):
         if text[i] == "{":
             depth += 1
         elif text[i] == "}":
             depth -= 1
             if depth == 0:
-                end = i + 1
-                break
+                return i + 1
+    return None
+
+
+def inject_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
+    """Inject or replace the displayName extension for the enum named in enum_sig."""
+    text = path.read_text(encoding="utf-8")
+    name_match = re.search(r"enum\s+(\w+)", enum_sig)
+    if not name_match:
+        return False
+    enum_name = name_match.group(1)
+    desired = extension_code.strip()
+    ext_marker = f"extension {enum_name} {{"
+    start = text.find(ext_marker)
+    if start >= 0:
+        brace = text.find("{", start)
+        end = _find_block_end(text, brace) if brace >= 0 else None
+        if end is None:
+            return False
+        current = text[start:end].strip()
+        if current == desired:
+            return False
+        path.write_text(text[:start] + desired + text[end:], encoding="utf-8")
+        return True
+    idx = text.find(enum_sig)
+    if idx < 0:
+        return False
+    brace = text.find("{", idx)
+    end = _find_block_end(text, brace) if brace >= 0 else None
     if end is None:
         return False
-    path.write_text(text[:end] + "\n\n" + extension_code.strip() + "\n" + text[end:], encoding="utf-8")
+    path.write_text(text[:end] + "\n\n" + desired + "\n" + text[end:], encoding="utf-8")
     return True
 
 
@@ -618,17 +825,17 @@ def patch_remaining_navigations(comp_root: Path) -> None:
     if not path.exists():
         return
     text = path.read_text(encoding="utf-8")
-    if "魔棒（W）" in text or "吸管（I）" in text:
-        return
-    pattern = re.compile(r"var label: String \{[^}]+\}")
     chinese = (
         'var label: String { self == .eyedropper ? "吸管（I）" : self == .marquee ? "选框（M）" : '
         'self == .lasso ? "套索（L）" : self == .wand ? "魔棒（W）" : self == .brush ? "画笔（B）· 橡皮擦（E）" : '
         'self == .spotHealing ? "污点修复画笔（J）" : self == .cloneStamp ? "仿制图章（S）· Option 点击取样" : '
         'self == .blur ? "涂抹（R）" : self == .gradient ? "渐变（G）" : '
-        'self == .shape ? "形状（U）· Shift-U 切换矩形/椭圆" : self == .crop ? "裁剪（C）" : '
+        'self == .shape ? "形状（U）· Shift-U 切换矩形/椭圆/直线" : self == .crop ? "裁剪（C）" : '
         'self == .move ? "移动/变换（V）" : self == .hand ? "抓手（H）" : "缩放（Z）" }'
     )
+    pattern = re.compile(r"var label: String \{[^}]+\}")
+    if "Shift-U 切换矩形/椭圆/直线" in text:
+        return
     if pattern.search(text):
         path.write_text(pattern.sub(chinese, text, count=1), encoding="utf-8")
 

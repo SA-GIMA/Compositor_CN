@@ -45,17 +45,6 @@ nonisolated enum LevelsAuto: String, CaseIterable {
     }
 }
 
-extension LevelsAuto {
-    nonisolated var displayName: String {
-        switch self {
-        case .contrast: "对比度"
-        case .color: "颜色"
-        case .neutral: "颜色 + 中性中间调"
-        }
-    }
-}
-
-
 extension LevelsSettings {
     /// Samples are unpremultiplied original RGB. All three channels are calibrated together.
     func sampling(_ rgb: [Double], mode: LevelsSample) -> Self {

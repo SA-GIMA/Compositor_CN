@@ -17,7 +17,7 @@ nonisolated enum ImageImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unreadable: "无法读取该图像。文件可能已损坏或不可用。"
-        case .unsupported: "请选择 JPEG、PNG、HEIC 或 TIFF 图像。"
+        case .unsupported: "Choose a JPEG, PNG, HEIC, TIFF, or Photoshop (PSD) file."
         case .tooLarge: "本次导入超出当前 1 亿像素文档预算或每边 30,000 像素限制。"
         }
     }
@@ -59,5 +59,13 @@ actor ImageImporter {
             }
             return ImportedImage(image: image, thumbnail: thumbnail, name: url.deletingPathExtension().lastPathComponent)
         }
+    }
+
+    func loadPhotoshop(_ url: URL, remainingPixels: Int = 100_000_000) throws -> PSDDocument {
+        try PSDReader.read(from: url, remainingPixels: remainingPixels)
+    }
+
+    func photoshopAssets(_ document: PSDDocument) throws -> [UUID: ImportedImage] {
+        try PSDDocumentBuilder.assets(from: document)
     }
 }

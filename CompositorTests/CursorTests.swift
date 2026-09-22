@@ -165,9 +165,11 @@ struct CursorTests {
         session.cancelTransform()
     }
 
-    /// In the layer list, Option over a thumbnail is for clipping masks; over the rest of a row it offers
-    /// to duplicate the layer by dragging.
-    @Test func optionOverALayerRowOffersDuplicatingExceptOverThumbnails() throws {
+    /// In the layer list, Option offers to duplicate the layer by dragging, over a row's name and over its
+    /// thumbnail alike. The clipping cursor is not the thumbnail's business at all: `clippingCursor(at:)`
+    /// reserves it for the bottom quarter of a row (`isClippingZone`). This comment, and the test's name, used
+    /// to say a thumbnail kept Option for clipping masks.
+    @Test func optionOverALayerRowOffersDuplicatingIncludingOverThumbnails() throws {
         let session = EditorSession()
         session.createDocument(width: 400, height: 300)
         session.addBlankLayer()
@@ -192,7 +194,10 @@ struct CursorTests {
         #expect(thumbnail.frame.size == CGSize(width: 36, height: 27), "the thumbnail takes the 400 × 300 canvas's shape")
         let center = thumbnail.convert(NSPoint(x: thumbnail.bounds.midX, y: thumbnail.bounds.midY), to: nil)
         table.mouseMoved(with: mouse(at: center, flags: .option, in: window))
-        #expect(NSCursor.current !== CanvasView.duplicateCursor, "Option over a thumbnail is for clipping masks")
+        // The thumbnail's centre is not in the row's bottom quarter, which is the only place Option means
+        // clipping (`clippingCursor(at:)` -> `isClippingZone`), so the list offers to duplicate here as it does
+        // over the rest of the row. This asserted the opposite, from when thumbnails kept Option for themselves.
+        #expect(NSCursor.current === CanvasView.duplicateCursor, "Option over a thumbnail still offers to duplicate")
         table.mouseMoved(with: mouse(at: name, in: window))
         #expect(NSCursor.current === NSCursor.arrow)
     }

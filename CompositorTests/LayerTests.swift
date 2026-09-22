@@ -238,6 +238,7 @@ struct LayerTests {
 
         session.addGroup()
         let folder = try #require(session.activeLayerID)
-        #expect(!session.duplicateLayer(folder, in: nil, atBottom: true), "folders aren't duplicated this way")
+        // Folder duplication arrived in 1.1.5: a dragged folder copies itself and its contents.
+        #expect(session.duplicateLayer(folder, in: nil, atBottom: true), "a folder duplicates with its contents")
     }
 }

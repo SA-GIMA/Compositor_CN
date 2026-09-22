@@ -36,6 +36,8 @@ extension FilterKind {
         case .exposure: "曝光度"
         case .gradientMap: "渐变映射"
         case .grain: "颗粒"
+        case .blackWhite: "黑白"
+        case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -96,6 +98,9 @@ extension AdjustmentKind {
         case .exposure: "曝光度"
         case .gradientMap: "渐变映射"
         case .grain: "颗粒"
+        case .invert: "反相"
+        case .blackWhite: "黑白"
+        case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -222,6 +227,7 @@ extension LayerEffectKind {
         case .shadow: "投影"
         case .colorOverlay: "颜色叠加"
         case .innerShadow: "内阴影"
+        case .outerGlow: "外发光"
         }
     }
 }
@@ -295,19 +301,44 @@ extension LayerBlendMode {
     nonisolated var displayName: String {
         switch self {
         case .normal: "正常"
+        case .darken: "变暗"
         case .multiply: "正片叠底"
+        case .colorBurn: "颜色加深"
+        case .linearBurn: "线性加深"
+        case .lighten: "变亮"
         case .screen: "滤色"
+        case .colorDodge: "颜色减淡"
+        case .linearDodge: "线性减淡（添加）"
         case .overlay: "叠加"
         case .softLight: "柔光"
-        case .darken: "变暗"
-        case .lighten: "变亮"
+        case .hardLight: "强光"
+        case .vividLight: "亮光"
+        case .linearLight: "线性光"
+        case .pinLight: "点光"
+        case .hardMix: "实色混合"
         case .difference: "差值"
-        case .colorDodge: "颜色减淡"
-        case .colorBurn: "颜色加深"
+        case .exclusion: "排除"
+        case .subtract: "减去"
+        case .divide: "划分"
         case .hue: "色相"
         case .saturation: "饱和度"
         case .color: "颜色"
         case .luminosity: "明度"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/Selection.swift",
+        "enum SelectionAmountOperation: String {",
+        """
+extension EditorSession.SelectionAmountOperation {
+    nonisolated var displayName: String {
+        switch self {
+        case .expand: "扩展"
+        case .contract: "收缩"
+        case .feather: "羽化"
         }
     }
 }

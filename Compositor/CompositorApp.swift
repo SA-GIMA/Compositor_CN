@@ -185,13 +185,18 @@ struct CompositorApp: App {
                         .configuredKeyboardShortcut(.delete, modifiers: .shift).disabled(!session.canContentAwareFill)
                 }
                 CommandMenu("选择") {
-                    // Text fields keep their own Select All.
+                    // A field being edited keeps its own Select All: offer it to the responder chain
+                    // first, which covers every kind of text control rather than NSTextView alone,
+                    // and select the canvas only when nothing there wanted it.
                     Button("全部") {
-                        if NSApp.keyWindow?.firstResponder is NSTextView {
-                            NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
-                        } else { session.selectAll() }
+                        if NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) { return }
+                        guard session.document != nil else { return }
+                        session.selectAll()
                     }
-                        .configuredKeyboardShortcut("a").disabled(session.document == nil)
+                        // Never disabled: on macOS this menu item is what binds Cmd-A to selectAll:, so
+                        // switching it off takes Select All away from every text field too. With no
+                        // document and nothing being edited the action simply does nothing.
+                        .configuredKeyboardShortcut("a")
                     Button("取消选择") { session.deselect() }
                         .configuredKeyboardShortcut("d").disabled(session.selection == nil || !session.canEditSelection)
                     Button("反选") { session.invertSelection() }
@@ -223,7 +228,7 @@ struct CompositorApp: App {
                         .configuredKeyboardShortcut("l").disabled(!session.canAdjustColors || session.hueSaturation != nil)
                     Button("色相/饱和度…") { session.beginHueSaturation() }
                         .configuredKeyboardShortcut("u").disabled(!session.canAdjustColors)
-                    ForEach([FilterKind.exposure, .gradientMap, .grain], id: \.self) { kind in
+                    ForEach([FilterKind.blackWhite, .colorBalance, .exposure, .gradientMap, .grain], id: \.self) { kind in
                         Button("\(kind.displayName)…") { session.beginFilter(kind) }
                             .disabled(!session.canAdjustColors || session.hueSaturation != nil)
                     }
@@ -254,7 +259,7 @@ struct CompositorApp: App {
                 CommandMenu("图层") {
                     Menu("新建调整图层") {
                         ForEach(AdjustmentKind.allCases, id: \.self) { kind in
-                            Button(kind.displayName + "…") { session.addAdjustment(kind) }
+                            Button(kind.rawValue + (kind.isEditable ? "…" : "")) { session.addAdjustment(kind) }
                         }
                     }.disabled(!session.canEditLayers || session.document == nil)
                     Button("编辑调整…") {

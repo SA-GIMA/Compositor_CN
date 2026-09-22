@@ -2,10 +2,29 @@ import Foundation
 import CoreGraphics
 
 nonisolated enum LayerBlendMode: String, Codable, CaseIterable, Sendable {
-    case normal = "Normal", multiply = "Multiply", screen = "Screen", overlay = "Overlay", softLight = "Soft Light"
-    case darken = "Darken", lighten = "Lighten", difference = "Difference"
-    case colorDodge = "Color Dodge", colorBurn = "Color Burn"
+    case normal = "Normal"
+    case darken = "Darken", multiply = "Multiply", colorBurn = "Color Burn"
+    case linearBurn = "Linear Burn"
+    case lighten = "Lighten", screen = "Screen", colorDodge = "Color Dodge"
+    case linearDodge = "Linear Dodge (Add)"
+    case overlay = "Overlay", softLight = "Soft Light", hardLight = "Hard Light"
+    case vividLight = "Vivid Light", linearLight = "Linear Light", pinLight = "Pin Light", hardMix = "Hard Mix"
+    case difference = "Difference", exclusion = "Exclusion", subtract = "Subtract", divide = "Divide"
     case hue = "Hue", saturation = "Saturation", color = "Color", luminosity = "Luminosity"
+
+    /// Photoshop's grouping: darkening modes together, then lightening, then contrast, then the
+    /// comparative ones, then the component modes. The menu draws a line between each group.
+    static let groups: [[LayerBlendMode]] = [
+        [.normal],
+        [.darken, .multiply, .colorBurn, .linearBurn],
+        [.lighten, .screen, .colorDodge, .linearDodge],
+        [.overlay, .softLight, .hardLight, .vividLight, .linearLight, .pinLight, .hardMix],
+        [.difference, .exclusion, .subtract, .divide],
+        [.hue, .saturation, .color, .luminosity]
+    ]
+
+    /// What Core Graphics can draw directly. The rest are composited through Core Image or by hand,
+    /// so this is only meaningful for the modes `SeparableBlend.needsSurface` leaves alone.
     var cgMode: CGBlendMode {
         switch self {
         case .normal: .normal
@@ -13,32 +32,67 @@ nonisolated enum LayerBlendMode: String, Codable, CaseIterable, Sendable {
         case .screen: .screen
         case .overlay: .overlay
         case .softLight: .softLight
+        case .hardLight: .hardLight
         case .darken: .darken
         case .lighten: .lighten
         case .difference: .difference
+        case .exclusion: .exclusion
         case .colorDodge: .colorDodge
         case .colorBurn: .colorBurn
         case .hue: .hue
         case .saturation: .saturation
         case .color: .color
         case .luminosity: .luminosity
+        // Drawn through Core Image or by hand; never reaches Core Graphics.
+        case .linearBurn, .linearDodge, .vividLight, .linearLight, .pinLight, .hardMix, .subtract, .divide: .normal
         }
     }
+
+    /// The Core Image filter that computes this mode, for the ones Core Graphics has no equivalent
+    /// for — or computes wrongly, as it does for Color Burn and Color Dodge.
+    var coreImageFilter: String? {
+        switch self {
+        case .colorBurn: "CIColorBurnBlendMode"
+        case .colorDodge: "CIColorDodgeBlendMode"
+        case .linearBurn: "CILinearBurnBlendMode"
+        case .linearDodge: "CILinearDodgeBlendMode"
+        case .vividLight: "CIVividLightBlendMode"
+        case .linearLight: "CILinearLightBlendMode"
+        case .pinLight: "CIPinLightBlendMode"
+        case .hardMix: "CIHardMixBlendMode"
+        case .subtract: "CISubtractBlendMode"
+        case .divide: "CIDivideBlendMode"
+        default: nil
+        }
+    }
+
+    // Photoshop's Darker Color and Lighter Color are left out: they compare a pixel's whole
+    // brightness rather than working a channel at a time, and neither framework implements them.
 }
 
 extension LayerBlendMode {
     nonisolated var displayName: String {
         switch self {
         case .normal: "正常"
+        case .darken: "变暗"
         case .multiply: "正片叠底"
+        case .colorBurn: "颜色加深"
+        case .linearBurn: "线性加深"
+        case .lighten: "变亮"
         case .screen: "滤色"
+        case .colorDodge: "颜色减淡"
+        case .linearDodge: "线性减淡（添加）"
         case .overlay: "叠加"
         case .softLight: "柔光"
-        case .darken: "变暗"
-        case .lighten: "变亮"
+        case .hardLight: "强光"
+        case .vividLight: "亮光"
+        case .linearLight: "线性光"
+        case .pinLight: "点光"
+        case .hardMix: "实色混合"
         case .difference: "差值"
-        case .colorDodge: "颜色减淡"
-        case .colorBurn: "颜色加深"
+        case .exclusion: "排除"
+        case .subtract: "减去"
+        case .divide: "划分"
         case .hue: "色相"
         case .saturation: "饱和度"
         case .color: "颜色"

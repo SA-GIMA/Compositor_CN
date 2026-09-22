@@ -326,21 +326,9 @@ extension EditorSession {
     var canModifySelection: Bool { selection?.isEmpty == false && canEditSelection && lassoDraft == nil }
 
     enum SelectionAmountOperation: String {
-        case expand = "Expand", contract = "Contract", feather = "Feather"
+        case expand = "Expand", contract = "Contract", feather = "羽化"
     }
-}
 
-extension EditorSession.SelectionAmountOperation {
-    nonisolated var displayName: String {
-        switch self {
-        case .expand: "扩展选区"
-        case .contract: "收缩选区"
-        case .feather: "羽化选区"
-        }
-    }
-}
-
-extension EditorSession {
     /// Menu commands ask for an amount; the tool header applies its input directly.
     func promptSelectionAmount(_ operation: SelectionAmountOperation) {
         guard canModifySelection else { return }
@@ -401,5 +389,15 @@ extension EditorSession {
         let canvas = CGPath(rect: CGRect(origin: .zero, size: document.size), transform: nil)
         setSelection(DocumentSelection(path: canvas.subtracting(current.path, using: .winding), antialiased: current.antialiased, feather: current.feather),
                      name: "反选")
+    }
+}
+
+extension EditorSession.SelectionAmountOperation {
+    nonisolated var displayName: String {
+        switch self {
+        case .expand: "扩展"
+        case .contract: "收缩"
+        case .feather: "羽化"
+        }
     }
 }

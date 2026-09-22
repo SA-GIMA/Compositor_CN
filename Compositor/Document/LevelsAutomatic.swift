@@ -1,6 +1,7 @@
 import AppKit
 
 nonisolated enum LevelsSample: String, CaseIterable { case black = "Black", gray = "Gray", white = "White" }
+
 extension LevelsSample {
     nonisolated var displayName: String {
         switch self {
@@ -10,6 +11,7 @@ extension LevelsSample {
         }
     }
 }
+
 nonisolated enum LevelsAuto: String, CaseIterable {
     case contrast = "Contrast", color = "Color", neutral = "Color + neutral midtones"
     func settings(histogram: [[Double]]) -> LevelsSettings {

@@ -19,10 +19,39 @@ struct FilterSheet: View {
             case .exposure:
                 control("曝光度", \.exposure.exposure, range: ExposureSettings.exposureRange, unit: "", decimals: 2, logarithmic: false)
                 control("偏移", \.exposure.offset, range: ExposureSettings.offsetRange, unit: "", decimals: 4, logarithmic: false)
-                control("中间调", \.exposure.gamma, range: ExposureSettings.gammaRange, unit: "", decimals: 2, logarithmic: true)
+                control("伽马", \.exposure.gamma, range: ExposureSettings.gammaRange, unit: "", decimals: 2, logarithmic: true)
             case .gradientMap:
                 GradientMapControls(settings: Binding(get: { settings.gradientMap }, set: { new in update { $0.gradientMap = new } }),
                                     pick: { session.openGradientMapColorPicker(highlights: $0) })
+            case .blackWhite:
+                // Each slider says how bright that family of colors becomes, as Photoshop's do.
+                control("红色", \.blackWhite.reds, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("黄色", \.blackWhite.yellows, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("绿色", \.blackWhite.greens, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("青色", \.blackWhite.cyans, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("蓝色", \.blackWhite.blues, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("洋红", \.blackWhite.magentas, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                Toggle("着色", isOn: flag(\.blackWhite.tint))
+                    .help("在保留影调的同时为结果上色，例如棕褐或蓝晒")
+                if settings.blackWhite.tint {
+                    control("色相", \.blackWhite.tintHue, range: 0...360, unit: "°", decimals: 0, logarithmic: false)
+                    control("饱和度", \.blackWhite.tintSaturation, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                }
+            case .colorBalance:
+                Text("阴影").font(.headline)
+                control("青色 / 红色", \.colorBalance.shadowCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("洋红 / 绿色", \.colorBalance.shadowMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("黄色 / 蓝色", \.colorBalance.shadowYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                Text("中间调").font(.headline)
+                control("青色 / 红色", \.colorBalance.midCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("洋红 / 绿色", \.colorBalance.midMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("黄色 / 蓝色", \.colorBalance.midYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                Text("高光").font(.headline)
+                control("青色 / 红色", \.colorBalance.highlightCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("洋红 / 绿色", \.colorBalance.highlightMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("黄色 / 蓝色", \.colorBalance.highlightYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                Toggle("保留明度", isOn: flag(\.colorBalance.preserveLuminosity))
+                    .help("之后恢复每个像素的亮度，只改变颜色")
             case .grain:
                 control("数量", \.grain.amount, range: GrainSettings.amountRange, unit: "", decimals: 0, logarithmic: false)
                 control("大小", \.grain.size, range: GrainSettings.sizeRange, unit: "px", decimals: 1, logarithmic: true)
@@ -37,7 +66,7 @@ struct FilterSheet: View {
                 .pickerStyle(.segmented).labelsHidden()
                 .help("基础速度快；高级会对照图层细节优化蒙版，适合毛发")
                 if settings.backgroundQuality == .advanced {
-                    control("细化", \.refineEdges, range: 0...40, unit: "px", decimals: 0, logarithmic: false)
+                    control("调整边缘", \.refineEdges, range: 0...40, unit: "px", decimals: 0, logarithmic: false)
                         .help("将蒙版对齐图像边缘，有助于恢复毛发")
                     control("对比度", \.matteContrast, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
                         .help("清除薄处透出背景的雾感")
@@ -133,8 +162,8 @@ struct GradientMapControls: View {
                 .overlay { RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(.black.opacity(0.35)) }
                 .accessibilityHidden(true)
             HStack(spacing: 20) {
-                swatch("Shadows", settings.shadows) { pick(false) }
-                swatch("Highlights", settings.highlights) { pick(true) }
+                swatch("阴影", settings.shadows) { pick(false) }
+                swatch("高光", settings.highlights) { pick(true) }
                 Spacer()
             }
             Toggle("反向", isOn: $settings.reversed)
@@ -156,7 +185,7 @@ struct GradientMapControls: View {
             }
             .buttonStyle(.plain)
             .help("选择\(title)颜色")
-            .accessibilityLabel("\(title)颜色")
+            .accessibilityLabel("\(title) color")
             Text(title)
         }
     }

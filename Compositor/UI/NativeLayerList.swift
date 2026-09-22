@@ -143,7 +143,7 @@ struct NativeLayerList: NSViewRepresentable {
             let cell = table.view(atColumn: 0, row: table.clickedRow, makeIfNecessary: false) as? LayerCell
             if cell?.isOnControl(point) == true {
                 if rows[table.clickedRow].liveText != nil { session.editActiveText(); return }
-                if rows[table.clickedRow].adjustment != nil { session.adjustmentEditingID = id; return }
+                if rows[table.clickedRow].adjustment?.kind.isEditable == true { session.adjustmentEditingID = id; return }
             }
             session.renamingLayerID = id
         }
@@ -198,9 +198,22 @@ struct NativeLayerList: NSViewRepresentable {
             let ids = draggedLayers(info)
             guard !ids.isEmpty else { return false }
             let copying = info.draggingSourceOperationMask == .copy
+            let intoFolder = dropOperation == .on && rows.indices.contains(row) && rows[row].isGroup
+            return place(ids, at: row, intoFolder: intoFolder, copying: copying)
+        }
+        /// Reorders one layer to the row a drop above it would use: the list's own move, without the dragging
+        /// plumbing, so anything that picks a row by itself — a test, a keyboard command — can reach it.
+        @discardableResult func moveLayer(_ id: UUID, to row: Int) -> Bool {
+            // `session.placeLayer` already refuses an unknown layer and a session that cannot edit layers, so the
+            // only thing left to reject is a row that is not a drop target. `place` treats a row past the end as
+            // the bottom, so what this actually catches is a negative one; the bound is written the way
+            // `validateDrop` writes it, so the two accept the same rows.
+            guard (0...rows.count).contains(row) else { return false }
+            return place([id], at: row, intoFolder: false, copying: false)
+        }
+        private func place(_ ids: [UUID], at row: Int, intoFolder: Bool, copying: Bool) -> Bool {
             // Where the drop lands is worked out once: each layer placed shifts the rows beneath it.
             let current = session.layerRows
-            let intoFolder = dropOperation == .on && rows.indices.contains(row) && rows[row].isGroup
             let parent: UUID?, above: UUID?, atBottom: Bool
             if intoFolder {
                 parent = rows[row].id; above = nil; atBottom = false
@@ -657,24 +670,24 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
         linkButton.isEnabled = thumbnail.isEnabled
         linkButton.toolTip = layer.mask?.isLinked == false ? "链接图层与蒙版，使其一起移动"
             : "取消链接，以便分别移动或变换图层与蒙版"
-        linkButton.setAccessibilityLabel(layer.mask?.isLinked == false ? "链接蒙版：\(layer.name)" : "取消链接蒙版：\(layer.name)")
+        linkButton.setAccessibilityLabel(layer.mask?.isLinked == false ? "Link mask: \(layer.name)" : "Unlink mask: \(layer.name)")
         thumbnail.toolTip = editableText ? "可编辑文字图层" : "选择图像像素"
-        maskThumbnail.toolTip = "选择图层蒙版；Shift 点击启用/禁用；Cmd 点击选择其黑色区域（Cmd-Shift 添加，Cmd-Option 减去）"
-        thumbnail.setAccessibilityLabel("选择\(editableText ? "文字" : "图像")：\(layer.name)")
-        maskThumbnail.setAccessibilityLabel("选择蒙版：\(layer.name)")
+        maskThumbnail.toolTip = "Select layer mask; Shift-click to enable/disable; Cmd-click to select its black areas (Cmd-Shift adds, Cmd-Option subtracts)"
+        thumbnail.setAccessibilityLabel("Select \(editableText ? "text" : "image"): \(layer.name)")
+        maskThumbnail.setAccessibilityLabel("Select mask: \(layer.name)")
         updateTarget()
         layerName = layer.name
         // A reused cell must not carry another row's half-finished rename.
         if renaming, layerID != layer.id { restoreLabel() }
         if !renaming { nameLabel.stringValue = (layer.maskSourceID == nil ? "" : "↳ ") + layer.name }
-        dimensions.stringValue = layer.liveText != nil ? "文字" : layer.adjustment != nil ? "调整 · 双击编辑" : layer.isGroup ? "文件夹" : "\(Int(layer.size.width.rounded())) × \(Int(layer.size.height.rounded())) px"
+        dimensions.stringValue = layer.liveText != nil ? "Text" : layer.adjustment != nil ? "Adjustment · Double-click to edit" : layer.isGroup ? "文件夹" : "\(Int(layer.size.width.rounded())) × \(Int(layer.size.height.rounded())) px"
         if let source = layer.maskSourceID {
             let sourceName = session.document?.layers.first(where: { $0.id == source })?.name ?? "缺失源图层"
-            dimensions.stringValue = "已剪贴到 \(sourceName)"
-            dimensions.toolTip = "基于 \(sourceName) 的剪贴蒙版。Option 点击其行底部可释放。"
+            dimensions.stringValue = "Clipped to \(sourceName)"
+            dimensions.toolTip = "Clipping mask based on \(sourceName). Option-click the bottom of its row to release."
         } else { dimensions.toolTip = nil }
         eye.image = NSImage(systemSymbolName: layer.isVisible ? "eye" : "eye.slash", accessibilityDescription: nil)
-        eye.setAccessibilityLabel("\(layer.isVisible ? "隐藏" : "显示") \(layer.name)")
+        eye.setAccessibilityLabel("\(layer.isVisible ? "Hide" : "Show") \(layer.name)")
         eye.isEnabled = enabled
         eye.layerID = layer.id
         eye.session = session
@@ -801,7 +814,7 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
     private static var adjustmentIcons: [String: NSImage] = [:]
     /// The folder symbol at 80% of the size it would fill the thumbnail slot with.
     private static let folderIcon: NSImage? = {
-        guard let symbol = NSImage(systemSymbolName: "folder", accessibilityDescription: "文件夹") else { return nil }
+        guard let symbol = NSImage(systemSymbolName: "folder", accessibilityDescription: "Folder") else { return nil }
         let fit = 36 * 0.8 / max(symbol.size.width, symbol.size.height)
         let size = NSSize(width: symbol.size.width * fit, height: symbol.size.height * fit)
         let icon = NSImage(size: NSSize(width: 36, height: 36), flipped: false) { bounds in
@@ -809,7 +822,7 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
             return true
         }
         icon.isTemplate = true
-        icon.accessibilityDescription = "文件夹"
+        icon.accessibilityDescription = "Folder"
         return icon
     }()
     private static func adjustmentIcon(_ symbolName: String, description: String, quarterTurnClockwise: Bool = false) -> NSImage? {

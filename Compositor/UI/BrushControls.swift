@@ -67,6 +67,18 @@ struct BrushControls: View {
                             change: { session.brushSettings.opacity = CGFloat(min(100, max(1, $0)) / 100) })
                 .help("按 1–9 设为 10–90%，0 为 100%")
                 .unitSuffix("%")
+            // Paint and Erase only: healing, cloning and smearing have their own feel.
+            if session.tool == .brush {
+                Text("平滑")
+                Slider(value: $session.brushSettings.smoothing, in: 0...100).frame(width: 100)
+                TextField("平滑", value: Binding<Double>(get: { Double(session.brushSettings.smoothing) },
+                    set: { session.brushSettings.smoothing = $0.isFinite ? CGFloat(min(100, max(0, $0))) : 0 }),
+                    format: .number.precision(.fractionLength(0)))
+                    .frame(width: 42).textFieldStyle(.roundedBorder)
+                    .arrowSteps(value: { Double(session.brushSettings.smoothing) },
+                                change: { session.brushSettings.smoothing = CGFloat(min(100, max(0, $0))) })
+                    .help("画笔以该长度拖在指针后，手抖也能画出平滑线条")
+            }
             if session.isMaskSelected {
                 Picker("绘制", selection: $session.maskPaintWhite) {
                     Text("黑色 · 隐藏").tag(false)

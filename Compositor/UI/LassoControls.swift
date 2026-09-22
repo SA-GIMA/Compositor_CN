@@ -215,7 +215,7 @@ struct SelectionAmountSheet: View {
                     .multilineTextAlignment(.trailing).focused($focused)
                     .unitSuffix("px")
             }
-            Text("请输入 1 到 \(maximum) 的整数像素。")
+            Text("请输入 1 到 \(maximum) 像素的整数。")
                 .font(.callout).foregroundStyle(.secondary)
                 .opacity(amount == nil ? 1 : 0)
             Divider()

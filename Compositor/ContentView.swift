@@ -21,8 +21,9 @@ struct ContentView: View {
         guard let workspace = applicationDelegate?.workspace else { return true }
         return workspace.canReceiveDrag(into: workspace.current.id)
     }
-    var body: some View {
-        VStack(spacing: 0) {
+    // Extracted from `body`: as one expression the type checker times out (Xcode 26.1).
+    @ViewBuilder private var toolHeaders: some View {
+        Group {
             if session.tool == .move {
                 TransformInspector(session: session).id(session.activeLayerID)
                 Divider()
@@ -71,6 +72,12 @@ struct ContentView: View {
                 }.padding(.horizontal, 18).toolHeaderBar()
                 Divider()
             }
+        }
+    }
+
+    @ViewBuilder private var editorStack: some View {
+        VStack(spacing: 0) {
+            toolHeaders
             HStack(spacing: 0) {
                 toolRail
                 Divider()
@@ -102,6 +109,11 @@ struct ContentView: View {
             statusBar.fixedSize(horizontal: false, vertical: true)
                 .modifier(WidthReader(width: $windowWidth))
         }
+    }
+
+    // Split again for 1.1: the chain outgrew the type checker once more.
+    @ViewBuilder private var editorChrome: some View {
+        editorStack
         .background(Color(white: 0.14))
         .background {
             if let applicationDelegate, applicationDelegate.projects.workspace == nil {
@@ -174,71 +186,19 @@ struct ContentView: View {
                 }.help("缩小（⌘−）").disabled(session.document == nil)
             }
         }
-        .onChange(of: session.levels == nil) { _, closed in
-            if closed { levelsPanel.close() }
-            else {
-                levelsPanel.onClose = { session.cancelLevels() }
-                levelsPanel.show(title: "色阶", content: LevelsSheet(session: session))
-            }
-        }
-        .onChange(of: session.hueSaturation == nil) { _, closed in
-            if closed { adjustmentPanel.close() }
-            else {
-                adjustmentPanel.onClose = { session.cancelHueSaturation() }
-                adjustmentPanel.show(title: "色相/饱和度", content: HueSaturationSheet(session: session))
-            }
-        }
-        .onChange(of: session.effectsEditing) { _, selection in
-            if let selection {
-                effectsPanel.onClose = { session.finishEffectsEditing(commit: false) }
-                effectsPanel.show(title: selection.kind.displayName, content: EffectsSheet(session: session, kind: selection.kind))
-            } else { effectsPanel.close() }
-        }
-        .onChange(of: session.document?.layers) { _, layers in
-            if let editing = session.effectsEditing,
-               layers?.first(where: { $0.id == editing.layerID })?.effects?.contains(editing.kind) != true {
-                if let picker = session.colorPicker, case .effect = picker.target { session.closeColorPicker(commit: false) }
-                session.effectsEditing = nil
-                session.effectsEditingOriginal = nil
-            }
-        }
-        .onChange(of: session.selectionAmountOperation) { _, operation in
-            if let operation {
-                selectionAmountPanel.onClose = { session.selectionAmountOperation = nil }
-                selectionAmountPanel.show(title: operation.displayName,
-                    content: SelectionAmountSheet(session: session, operation: operation))
-            } else { selectionAmountPanel.close() }
-        }
-        .onChange(of: session.filterEdit == nil) { _, closed in
-            if closed { filterPanel.close() }
-            else {
-                filterPanel.onClose = { session.cancelFilter() }
-                filterPanel.show(title: session.filterEdit?.kind.displayName ?? "滤镜", content: FilterSheet(session: session))
-            }
-        }
-        .onChange(of: session.document == nil) { _, empty in
-            if !empty { session.canvasFocusRequest += 1 }
-        }
-        .fileImporter(isPresented: $session.showsImporter,
-                      allowedContentTypes: [.jpeg, .png, .heic, .tiff], allowsMultipleSelection: true) { result in
-            switch result {
-            case .success(let urls): Task { await session.importImages(urls) }
-            case .failure(let error):
-                if (error as NSError).code != NSUserCancelledError { session.importError = error.localizedDescription }
-            }
-        }
-        .alert("导入未完成", isPresented: Binding(
-            get: { session.importError != nil }, set: { if !$0 { session.importError = nil } })) {
-                Button("好", role: .cancel) { session.importError = nil }
-            } message: { Text(session.importError ?? "") }
-        .alert("无法绘制", isPresented: Binding(get: { session.brushError != nil },
-            set: { if !$0 { session.brushError = nil } })) {
-                Button("好") { session.brushError = nil }
-            } message: { Text(session.brushError ?? "") }
-        .alert("无法裁剪", isPresented: Binding(get: { session.cropError != nil },
-            set: { if !$0 { session.cropError = nil } })) {
-                Button("好") { session.cropError = nil }
-            } message: { Text(session.cropError ?? "") }
+    }
+
+    var body: some View {
+        editorChrome
+        .modifier(SessionPanelSync(
+            session: session,
+            levelsPanel: levelsPanel,
+            adjustmentPanel: adjustmentPanel,
+            selectionAmountPanel: selectionAmountPanel,
+            filterPanel: filterPanel,
+            effectsPanel: effectsPanel
+        ))
+        .modifier(SessionErrorAlerts(session: session))
     }
     private func requestNewCanvas() {
         if let applicationDelegate { Task { await applicationDelegate.projects.newCanvas() } }
@@ -307,6 +267,131 @@ struct ContentView: View {
         .font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
         .padding(.horizontal, 18).frame(height: 30)
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// Panel open/close and importer hooks, kept out of ContentView.body so type-checking stays fast.
+private struct SessionPanelSync: ViewModifier {
+    @Bindable var session: EditorSession
+    var levelsPanel: FloatingPanelController
+    var adjustmentPanel: FloatingPanelController
+    var selectionAmountPanel: FloatingPanelController
+    var filterPanel: FloatingPanelController
+    var effectsPanel: FloatingPanelController
+
+    private func effectStillPresent(layers: [ImageLayer]?, kind: LayerEffectKind, layerID: UUID) -> Bool {
+        guard let layers else { return false }
+        for item in layers {
+            if item.id == layerID {
+                if let effects = item.effects, effects.contains(kind) { return true }
+                return false
+            }
+        }
+        return false
+    }
+
+    private func openLevels() {
+        levelsPanel.onClose = { session.cancelLevels() }
+        levelsPanel.show(title: "色阶", content: LevelsSheet(session: session))
+    }
+
+    private func openHueSaturation() {
+        adjustmentPanel.onClose = { session.cancelHueSaturation() }
+        adjustmentPanel.show(title: "色相/饱和度", content: HueSaturationSheet(session: session))
+    }
+
+    private func openEffects(selection: LayerEffectSelection) {
+        let title = selection.kind.displayName
+        let sheet = EffectsSheet(session: session, kind: selection.kind)
+        effectsPanel.onClose = { session.finishEffectsEditing(commit: false) }
+        effectsPanel.show(title: title, content: sheet)
+    }
+
+    private func openSelectionAmount(operation: EditorSession.SelectionAmountOperation) {
+        selectionAmountPanel.onClose = { session.selectionAmountOperation = nil }
+        selectionAmountPanel.show(title: operation.displayName,
+            content: SelectionAmountSheet(session: session, operation: operation))
+    }
+
+    private func openFilter() {
+        filterPanel.onClose = { session.cancelFilter() }
+        let title = session.filterEdit?.kind.displayName ?? "滤镜"
+        filterPanel.show(title: title, content: FilterSheet(session: session))
+    }
+
+    private func importPicked(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            Task { await session.importImages(urls) }
+        case .failure(let error):
+            if (error as NSError).code != NSUserCancelledError {
+                session.importError = error.localizedDescription
+            }
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: session.levels == nil) { _, closed in
+                if closed { levelsPanel.close() } else { openLevels() }
+            }
+            .onChange(of: session.hueSaturation == nil) { _, closed in
+                if closed { adjustmentPanel.close() } else { openHueSaturation() }
+            }
+            .onChange(of: session.effectsEditing) { _, selection in
+                if let selection { openEffects(selection: selection) } else { effectsPanel.close() }
+            }
+            .onChange(of: session.document?.layers) { _, layers in
+                guard let editing = session.effectsEditing else { return }
+                if !effectStillPresent(layers: layers, kind: editing.kind, layerID: editing.layerID) {
+                    if let picker = session.colorPicker, case .effect = picker.target { session.closeColorPicker(commit: false) }
+                    session.effectsEditing = nil
+                    session.effectsEditingOriginal = nil
+                }
+            }
+            .onChange(of: session.selectionAmountOperation) { _, operation in
+                if let operation { openSelectionAmount(operation: operation) } else { selectionAmountPanel.close() }
+            }
+            .onChange(of: session.filterEdit == nil) { _, closed in
+                if closed { filterPanel.close() } else { openFilter() }
+            }
+            .onChange(of: session.document == nil) { _, empty in
+                if !empty { session.canvasFocusRequest += 1 }
+            }
+            .fileImporter(isPresented: $session.showsImporter,
+                          allowedContentTypes: UTType.importableImages, allowsMultipleSelection: true) { result in
+                importPicked(result)
+            }
+    }
+}
+
+/// Splits the three error alerts out of ContentView.body so the type checker stays fast.
+private struct SessionErrorAlerts: ViewModifier {
+    @Bindable var session: EditorSession
+
+    func body(content: Content) -> some View {
+        content
+            .alert("导入未完成", isPresented: Binding(
+                get: { session.importError != nil }, set: { if !$0 { session.importError = nil } })) {
+                    Button("好", role: .cancel) { session.importError = nil }
+                } message: {
+                    let text = session.importError ?? ""
+                    Text(text)
+                }
+            .alert("无法绘制", isPresented: Binding(
+                get: { session.brushError != nil }, set: { if !$0 { session.brushError = nil } })) {
+                    Button("好") { session.brushError = nil }
+                } message: {
+                    let text = session.brushError ?? ""
+                    Text(text)
+                }
+            .alert("无法裁剪", isPresented: Binding(
+                get: { session.cropError != nil }, set: { if !$0 { session.cropError = nil } })) {
+                    Button("好") { session.cropError = nil }
+                } message: {
+                    let text = session.cropError ?? ""
+                    Text(text)
+                }
     }
 }
 

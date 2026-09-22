@@ -12,6 +12,7 @@ struct EffectsSheet: View {
             case .shadow: shadow
             case .colorOverlay: colorOverlay
             case .innerShadow: innerShadow
+            case .outerGlow: outerGlow
             }
             HStack(spacing: 10) {
                 Spacer()
@@ -112,6 +113,23 @@ struct EffectsSheet: View {
             slider("模糊", value: Binding(get: { effect.blur }, set: { blur in
                 session.changeEffects { $0.innerShadow?.blur = blur }
             }), range: 0...100, inputRange: 0...500, unit: "px")
+        }
+    }
+
+    @ViewBuilder private var outerGlow: some View {
+        let effect = session.editingEffects.outerGlow
+        HStack {
+            Text("外发光").font(.headline)
+            Spacer()
+            if effect != nil { swatch(.outerGlow) }
+        }
+        if let effect {
+            slider("大小", value: Binding(get: { effect.size }, set: { size in
+                session.changeEffects { $0.outerGlow?.size = size }
+            }), range: 0...100, inputRange: 0...500, unit: "px")
+            slider("不透明度", value: Binding(get: { CGFloat(effect.opacity * 100) }, set: { value in
+                session.changeEffects { $0.outerGlow?.opacity = Double(value) / 100 }
+            }), range: 0...100, unit: "%")
         }
     }
 

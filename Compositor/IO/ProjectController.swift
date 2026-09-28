@@ -8,6 +8,8 @@ final class ProjectController {
     weak var window: NSWindow?
     weak var workspace: ProjectWorkspace?
     private var saveGeneration = 0
+    /// Keeps the document in step with its package when something else writes it. See ProjectController+ExternalChanges.
+    let externalChanges = ExternalChangeState()
     var canStart: Bool {
         session.canStartProjectOperation && workspace?.isManaging != true
     }
@@ -23,10 +25,21 @@ final class ProjectController {
 
     @discardableResult
     func save(asNew: Bool = false) async -> Bool {
-        guard session.document != nil, begin() else { return false }
-        defer { session.isProjectBusy = false }
-        return await saveCurrent(asNew: asNew)
+        guard session.document != nil else { return false }
+        // Another save still writing finishes first; then this one saves whatever has changed since.
+        await finishWriting()
+        guard begin() else { return false }
+        let prepared = await prepareSave(asNew: asNew)
+        // Only the snapshot (and the Save panel) holds the tools. The document is captured, so editing can go on
+        // while the package is written in the background, as in Photoshop.
+        session.isProjectBusy = false
+        guard let prepared else { return false }
+        return await write(prepared.snapshot, to: prepared.destination, revision: prepared.revision)
     }
+
+    /// The save still writing, if any. Close, quit and replacing the document wait for it.
+    private var writing: Task<Bool, Never>?
+    func finishWriting() async { if let writing { _ = await writing.value } }
 
     func exportPNG() async {
         guard session.document != nil, begin() else { return }
@@ -55,7 +68,7 @@ final class ProjectController {
             let sheet = NSWindow()
             sheet.styleMask = [.titled, .fullSizeContentView]
             sheet.title = "画布大小"
-            sheet.contentViewController = NSHostingController(rootView: CanvasSizeSheet(document: document, foreground: session.foregroundColor, background: session.backgroundColor) { options in
+            sheet.contentViewController = NSHostingController(rootView: CanvasSizeSheet(document: document, session: session) { options in
                 window.endSheet(sheet)
                 sheet.orderOut(nil)
                 sheet.contentViewController = nil
@@ -92,6 +105,58 @@ final class ProjectController {
         } catch { await showError("无法调整图像大小", error: error) }
     }
 
+    func trim() async {
+        guard let window, session.document != nil, begin() else { return }
+        defer { session.isProjectBusy = false }
+        let options: TrimOptions? = await withCheckedContinuation { continuation in
+            let sheet = NSWindow()
+            sheet.styleMask = [.titled, .fullSizeContentView]
+            sheet.title = "Trim"
+            sheet.contentViewController = NSHostingController(rootView: TrimSheet { options in
+                window.endSheet(sheet)
+                sheet.orderOut(nil)
+                sheet.contentViewController = nil
+                continuation.resume(returning: options)
+            })
+            window.beginSheet(sheet)
+        }
+        guard let options, let snapshot = session.projectSnapshot() else { return }
+        do {
+            guard let resized = try await ImageTrim.trim(snapshot, options: options) else {
+                return
+            }
+            session.applyDocumentSize(resized, actionName: "Trim")
+        } catch { await showError("Couldn’t trim image", error: error) }
+    }
+
+    /// View > Grid Settings…: changes only how the grid is drawn and snapped to, so nothing is saved or undone. The
+    /// grid shows while the sheet is open, changing as it's edited, and goes back to how it was on Cancel.
+    func gridSettings() async {
+        guard let window, window.attachedSheet == nil else { return }
+        let original = (grid: session.layoutGrid, appearance: session.gridAppearance, shown: session.showsGrid)
+        session.showsGrid = true
+        let settings: (LayoutGrid, GridAppearance)? = await withCheckedContinuation { continuation in
+            let sheet = NSWindow()
+            sheet.styleMask = [.titled, .fullSizeContentView]
+            sheet.title = "网格"
+            sheet.contentViewController = NSHostingController(rootView: GridSettingsSheet(
+                session: session, grid: original.grid, appearance: original.appearance,
+                preview: { [session] grid, appearance in
+                    session.layoutGrid = grid
+                    session.gridAppearance = appearance
+                }) { settings in
+                    window.endSheet(sheet)
+                    sheet.orderOut(nil)
+                    sheet.contentViewController = nil
+                    continuation.resume(returning: settings)
+                })
+            window.beginSheet(sheet)
+        }
+        session.showsGrid = original.shown
+        session.layoutGrid = settings?.0 ?? original.grid
+        session.gridAppearance = settings?.1 ?? original.appearance
+    }
+
     func exportJPEG() async {
         guard let window, session.document != nil, begin() else { return }
         defer { session.isProjectBusy = false }
@@ -102,7 +167,7 @@ final class ProjectController {
                 let sheet = NSWindow()
                 sheet.styleMask = [.titled, .fullSizeContentView]
                 sheet.title = "导出 JPEG"
-                sheet.contentViewController = NSHostingController(rootView: JPEGExportSheet(raster: raster) { data in
+                sheet.contentViewController = NSHostingController(rootView: JPEGExportSheet(raster: raster, session: session) { data in
                     window.endSheet(sheet)
                     sheet.orderOut(nil)
                     // Release the hosted view and its closure after dismissal.
@@ -126,7 +191,15 @@ final class ProjectController {
     }
 
     private func saveCurrent(asNew: Bool = false) async -> Bool {
-        guard let snapshot = session.projectSnapshot() else { return true }
+        guard session.document != nil else { return true }
+        guard let prepared = await prepareSave(asNew: asNew) else { return false }
+        return await write(prepared.snapshot, to: prepared.destination, revision: prepared.revision)
+    }
+
+    /// The document as it is now, and where it goes: asks with the Save panel when it has no file yet (or Save As).
+    private func prepareSave(asNew: Bool) async -> (snapshot: ProjectSnapshot, destination: URL, revision: UUID)? {
+        let revision = session.history.currentRevision
+        guard let snapshot = session.projectSnapshot() else { return nil }
         var destination = asNew ? nil : session.projectURL
         if destination == nil {
             let panel = NSSavePanel()
@@ -138,23 +211,40 @@ final class ProjectController {
             let response: NSApplication.ModalResponse
             if let window { response = await panel.beginSheetModal(for: window) }
             else { response = await panel.begin() }
-            guard response == .OK, let url = panel.url else { return false }
+            guard response == .OK, let url = panel.url else { return nil }
             destination = url
         }
-        guard let destination else { return false }
-        let scoped = destination.startAccessingSecurityScopedResource()
-        defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
-        do {
-            try await ProjectStore.shared.save(snapshot, to: destination)
-            session.projectURL = destination
-            session.history.markSaved()
-            saveGeneration += 1
-            NSDocumentController.shared.noteNewRecentDocumentURL(destination)
-            return true
-        } catch {
-            await showError("无法存储项目", error: error)
-            return false
+        guard let destination else { return nil }
+        return (snapshot, destination, revision)
+    }
+
+    /// Writes a captured document in the background. Only that captured version counts as saved.
+    private func write(_ snapshot: ProjectSnapshot, to destination: URL, revision: UUID) async -> Bool {
+        let task = Task { @MainActor [self] () -> Bool in
+            let scoped = destination.startAccessingSecurityScopedResource()
+            defer { if scoped { destination.stopAccessingSecurityScopedResource() } }
+            // Our own save changes the package too; the watch ignores events until the saved bytes are remembered.
+            externalChanges.saving = true
+            defer { externalChanges.saving = false }
+            do {
+                let quickLook = await ImageExporter.shared.quickLookImages(snapshot)
+                try await ProjectStore.shared.save(snapshot, to: destination, quickLook: quickLook)
+                session.projectURL = destination
+                session.history.markSaved(revision)
+                saveGeneration += 1
+                RecentProjects.shared.note(destination)
+                await rememberProjectDigest(for: destination)
+                watchProject(at: destination)
+                return true
+            } catch {
+                await showError("无法存储项目", error: error)
+                return false
+            }
         }
+        writing = task
+        let saved = await task.value
+        if writing == task { writing = nil }
+        return saved
     }
 
     @discardableResult
@@ -177,6 +267,12 @@ final class ProjectController {
             source = url
         }
         guard let source else { return false }
+        // A recent project deleted in Finder: name the project, not the manifest inside it the load would miss.
+        guard FileManager.default.fileExists(atPath: source.path) else {
+            RecentProjects.shared.refresh()
+            await showError("无法打开项目", error: CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: source.path]))
+            return false
+        }
         let scoped = source.startAccessingSecurityScopedResource()
         defer { if scoped { source.stopAccessingSecurityScopedResource() } }
         do {
@@ -190,7 +286,9 @@ final class ProjectController {
                 snapshot = try await ProjectStore.shared.load(from: source)
             }
             session.installProject(snapshot, from: source)
-            NSDocumentController.shared.noteNewRecentDocumentURL(source)
+            RecentProjects.shared.note(source)
+            await rememberProjectDigest(for: source)
+            watchProject(at: source)
             return true
         } catch {
             await showError("无法打开项目", error: error)
@@ -203,7 +301,7 @@ final class ProjectController {
         guard begin() else { return }
         let proceed = await confirmReplacement()
         session.isProjectBusy = false
-        if proceed { session.clearProject() }
+        if proceed { session.clearProject(); stopWatchingProject() }
     }
 
     func close(_ window: NSWindow) async {
@@ -215,6 +313,7 @@ final class ProjectController {
         session.isProjectBusy = false
         if proceed {
             session.clearProject()
+            stopWatchingProject()
             window.close()
         }
     }
@@ -226,6 +325,8 @@ final class ProjectController {
     }
 
     private func confirmReplacement() async -> Bool {
+        // A save still writing finishes before the project can be closed or replaced, so its file is never cut short.
+        await finishWriting()
         guard session.isModified, session.document != nil else { return true }
         let alert = NSAlert()
         alert.messageText = "Save changes to \(session.projectURL?.lastPathComponent ?? "未命名")?"

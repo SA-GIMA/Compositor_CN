@@ -11,7 +11,9 @@ struct LassoControls: View {
                     session.cancelLasso()
                     session.marqueeKind = kind
                 })) {
-                    ForEach(LassoKind.marqueeChoices, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(LassoKind.marqueeChoices, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("按 M 在矩形与椭圆之间切换")
@@ -21,7 +23,9 @@ struct LassoControls: View {
                     session.cancelLasso()
                     session.wandMode = mode
                 })) {
-                    ForEach(WandMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(WandMode.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("按 Tab 在魔棒与对象之间切换")
@@ -31,7 +35,9 @@ struct LassoControls: View {
                     session.cancelLasso()
                     session.lassoKind = kind
                 })) {
-                    ForEach(LassoKind.lassoChoices, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(LassoKind.lassoChoices, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("按 L 在套索与多边形套索之间切换")
@@ -39,7 +45,9 @@ struct LassoControls: View {
             // Shows held Shift/Option (or an outline's mode) live; clicking sets the choice.
             Picker("模式", selection: Binding(get: { session.displayedSelectionMode },
                                               set: { session.selectionModeChoice = $0 })) {
-                ForEach(SelectionMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                ForEach(SelectionMode.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
             .help("按住 Shift 添加或 Option 减去轮廓")
@@ -68,7 +76,8 @@ struct LassoControls: View {
                     .frame(width: 48).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing)
                     .arrowSteps(value: { Double(session.selectionFeatherAmount) },
                                 change: { session.selectionFeatherAmount = Int(min(250, max(1, $0))) })
-                    .unitSuffix("px")
+                    .unitSuffix("px", scrubValue: $session.selectionFeatherAmount,
+                                sensitivity: 1, range: 1...250)
             }
             Spacer(minLength: 0)
             if let selection = session.selection {
@@ -84,7 +93,7 @@ struct LassoControls: View {
     private var wandControls: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
-                Text("容差")
+                Text("容差").scrubbable(sensitivity: 1, value: $session.wandSettings.tolerance, range: 0...255)
                 TextField("容差", value: Binding(get: { session.wandSettings.tolerance },
                                                       set: { session.wandSettings.tolerance = min(255, max(0, $0)) }),
                           format: .number)
@@ -119,7 +128,7 @@ struct LassoControls: View {
             .pickerStyle(.segmented).labelsHidden().fixedSize()
             .help("仅分析当前图层，或分析所有可见图层")
             HStack(spacing: 6) {
-                Text("边缘")
+                Text("边缘").scrubbable(sensitivity: 1, value: $session.objectSelectionSettings.edgeOffset, range: -10...10)
                 TextField("边缘", value: Binding(get: { session.objectSelectionSettings.edgeOffset },
                                                  set: { session.objectSelectionSettings.edgeOffset = min(10, max(-10, $0)) }),
                           format: .number)
@@ -147,7 +156,7 @@ struct LassoControls: View {
                 .multilineTextAlignment(.trailing)
                 .arrowSteps(value: { Double(amount.wrappedValue) },
                             change: { amount.wrappedValue = Int(min(500, max(1, $0.rounded()))) })
-                .unitSuffix("px")
+                .unitSuffix("px", scrubValue: amount, sensitivity: 1, range: 1...500)
         }
         .disabled(!session.canModifySelection)
         .help("按该像素数\(title)选区")
@@ -207,6 +216,9 @@ struct SelectionAmountSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
                 Text("数量").frame(minWidth: 60, alignment: .leading)
+                    .scrubbable(sensitivity: 1,
+                                value: Binding<Int>(get: { amount ?? 1 }, set: { input = String($0) }),
+                                range: 1...maximum)
                 Slider(value: Binding(get: { Double(amount ?? 1) },
                                       set: { input = String(Int($0.rounded())) }),
                        in: 1...Double(maximum), step: 1)

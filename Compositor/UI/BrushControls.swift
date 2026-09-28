@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 struct BrushControls: View {
     @Bindable var session: EditorSession
@@ -8,21 +7,27 @@ struct BrushControls: View {
             Text(session.tool == .spotHealing ? "污点修复" : session.tool == .cloneStamp ? "仿制图章" : session.tool == .blur ? "涂抹" : session.brushMode == .erase ? "橡皮擦" : "画笔").font(ToolHeaderStyle.titleFont)
             if session.tool == .brush {
                 Picker("模式", selection: $session.brushMode) {
-                    ForEach(BrushToolMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(BrushToolMode.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("用前景色绘制（B），或擦除像素（E）")
             }
             if session.tool == .blur {
                 Picker("模式", selection: $session.blurMode) {
-                    ForEach(BlurToolMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(BlurToolMode.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("液化推动像素 · 模糊柔化 · 涂抹拖动颜色")
             }
             if session.tool == .spotHealing {
                 Picker("类型", selection: $session.spotHealingMode) {
-                    ForEach(SpotHealingMode.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(SpotHealingMode.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .accessibilityIdentifier("spotHealingType")
@@ -37,7 +42,7 @@ struct BrushControls: View {
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 .help("仅从当前图层拷贝，或从所有可见图层拷贝")
             }
-            Text("大小")
+            Text("大小").scrubbable(sensitivity: 1.0, value: $session.brushSettings.diameter, range: 1...2000)
             TextField("大小", value: Binding<Double>(get: { Double(session.brushSettings.diameter) },
                 set: { session.brushSettings.diameter = $0.isFinite ? CGFloat(min(2000, max(1, $0))) : 40 }),
                 format: .number.precision(.fractionLength(0)))
@@ -48,7 +53,7 @@ struct BrushControls: View {
                     session.brushSettings.diameter = value.isFinite ? min(2000, max(1, value)) : 40
                 }
                 .unitSuffix("px")
-            Text("硬度")
+            Text("硬度").scrubbable(sensitivity: 0.01, value: $session.brushSettings.hardness, range: 0...1)
             Slider(value: $session.brushSettings.hardness, in: 0...1).frame(width: 100)
             TextField("硬度", value: Binding<Double>(get: { Double(session.brushSettings.hardness * 100) },
                 set: { session.brushSettings.hardness = $0.isFinite ? CGFloat(min(1, max(0, $0 / 100))) : 1 }),
@@ -58,6 +63,7 @@ struct BrushControls: View {
                             change: { session.brushSettings.hardness = CGFloat(min(1, max(0, $0 / 100))) })
                 .unitSuffix("%")
             Text(session.tool == .blur ? "强度" : "不透明度")
+                .scrubbable(sensitivity: 0.01, value: $session.brushSettings.opacity, range: 0.01...1)
             Slider(value: $session.brushSettings.opacity, in: 0.01...1).frame(width: 100)
             TextField("不透明度", value: Binding<Double>(get: { Double(session.brushSettings.opacity * 100) },
                 set: { session.brushSettings.opacity = $0.isFinite ? CGFloat(min(100, max(1, $0)) / 100) : 1 }),
@@ -70,6 +76,7 @@ struct BrushControls: View {
             // Paint and Erase only: healing, cloning and smearing have their own feel.
             if session.tool == .brush {
                 Text("平滑")
+                    .scrubbable(sensitivity: 1, value: $session.brushSettings.smoothing, range: 0...100)
                 Slider(value: $session.brushSettings.smoothing, in: 0...100).frame(width: 100)
                 TextField("平滑", value: Binding<Double>(get: { Double(session.brushSettings.smoothing) },
                     set: { session.brushSettings.smoothing = $0.isFinite ? CGFloat(min(100, max(0, $0))) : 0 }),

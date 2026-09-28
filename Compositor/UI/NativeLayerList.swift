@@ -41,7 +41,7 @@ struct NativeLayerList: NSViewRepresentable {
         if let table = scroll.documentView as? NSTableView { context.coordinator.update(table) }
     }
 
-    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+    final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate, NSMenuItemValidation {
         static let layerType = NSPasteboard.PasteboardType("com.compositor.layer-row")
         /// An Option-drag from a mask thumbnail: the id of the layer whose mask is being copied.
         static let effectType = NSPasteboard.PasteboardType("com.compositor.layer-effect")
@@ -101,6 +101,216 @@ struct NativeLayerList: NSViewRepresentable {
                     (table.view(atColumn: 0, row: row, makeIfNecessary: true) as? LayerCell)?.beginRenaming()
                 }
             }
+        }
+
+        func layer(for row: Int) -> ImageLayer? {
+            guard rows.indices.contains(row) else { return nil }
+            return rows[row]
+        }
+
+        func contextMenu(for row: Int) -> NSMenu? {
+            guard rows.indices.contains(row) else { return nil }
+            if session.selectedLayerIDs.isEmpty {
+                session.selectLayer(rows[row].id)
+            }
+            let menu = NSMenu()
+
+            // 1. Duplicate Layer
+            let duplicateItem = NSMenuItem(title: "复制图层", action: #selector(duplicateLayerAction), keyEquivalent: "")
+            duplicateItem.target = self
+            duplicateItem.isEnabled = validateMenuItem(duplicateItem)
+            menu.addItem(duplicateItem)
+
+            // 2. Rename…
+            let renameItem = NSMenuItem(title: "重命名…", action: #selector(renameLayerAction), keyEquivalent: "")
+            renameItem.target = self
+            renameItem.isEnabled = validateMenuItem(renameItem)
+            menu.addItem(renameItem)
+
+            // 3. Delete Layer / Delete Selected Layers
+            let deleteTitle: String
+            if session.isMaskSelected && session.activeLayer?.mask != nil {
+                deleteTitle = "Delete Mask"
+            } else if session.selectedLayerIDs.count > 1 {
+                deleteTitle = "Delete Selected Layers"
+            } else {
+                deleteTitle = "Delete Layer"
+            }
+            let deleteItem = NSMenuItem(title: deleteTitle, action: #selector(deleteLayerAction), keyEquivalent: "")
+            deleteItem.target = self
+            deleteItem.isEnabled = validateMenuItem(deleteItem)
+            menu.addItem(deleteItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 4. Create Clipping Mask / Release Clipping Mask
+            let clippingTitle = session.activeLayer?.maskSourceID != nil ? "释放剪贴蒙版" : "创建剪贴蒙版"
+            let clippingItem = NSMenuItem(title: clippingTitle, action: #selector(toggleClippingMaskAction), keyEquivalent: "")
+            clippingItem.target = self
+            clippingItem.isEnabled = validateMenuItem(clippingItem)
+            menu.addItem(clippingItem)
+
+            // 5. Group Selected Layers
+            let groupItem = NSMenuItem(title: "编组所选图层", action: #selector(groupSelectedLayersAction), keyEquivalent: "")
+            groupItem.target = self
+            groupItem.isEnabled = validateMenuItem(groupItem)
+            menu.addItem(groupItem)
+
+            // 6. Move Out of Folder
+            let moveOutItem = NSMenuItem(title: "移出文件夹", action: #selector(moveOutOfFolderAction), keyEquivalent: "")
+            moveOutItem.target = self
+            moveOutItem.isEnabled = validateMenuItem(moveOutItem)
+            menu.addItem(moveOutItem)
+
+            // 7. Merge Down / Merge Layers / Merge Group
+            let mergeItem = NSMenuItem(title: session.mergeTitle, action: #selector(mergeLayersAction), keyEquivalent: "")
+            mergeItem.target = self
+            mergeItem.isEnabled = validateMenuItem(mergeItem)
+            menu.addItem(mergeItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 8. Add Mask >
+            let addMaskItem = NSMenuItem(title: "添加蒙版", action: nil, keyEquivalent: "")
+            let addMaskSubmenu = NSMenu(title: "添加蒙版")
+            let revealAllItem = NSMenuItem(title: "全部显示（白色）", action: #selector(addWhiteMaskAction), keyEquivalent: "")
+            revealAllItem.target = self
+            revealAllItem.isEnabled = validateMenuItem(revealAllItem)
+            addMaskSubmenu.addItem(revealAllItem)
+            let hideAllItem = NSMenuItem(title: "全部隐藏（黑色）", action: #selector(addBlackMaskAction), keyEquivalent: "")
+            hideAllItem.target = self
+            hideAllItem.isEnabled = validateMenuItem(hideAllItem)
+            addMaskSubmenu.addItem(hideAllItem)
+            addMaskItem.submenu = addMaskSubmenu
+            addMaskItem.isEnabled = session.canEditMask && session.activeLayer?.mask == nil
+            menu.addItem(addMaskItem)
+
+            // 9. Enable Mask / Disable Mask
+            let toggleMaskTitle = session.activeLayer?.mask?.isEnabled == false ? "Enable Mask" : "Disable Mask"
+            let toggleMaskItem = NSMenuItem(title: toggleMaskTitle, action: #selector(toggleMaskAction), keyEquivalent: "")
+            toggleMaskItem.target = self
+            toggleMaskItem.isEnabled = validateMenuItem(toggleMaskItem)
+            menu.addItem(toggleMaskItem)
+
+            // 10. Delete Mask
+            let deleteMaskItem = NSMenuItem(title: "删除蒙版", action: #selector(deleteMaskAction), keyEquivalent: "")
+            deleteMaskItem.target = self
+            deleteMaskItem.isEnabled = validateMenuItem(deleteMaskItem)
+            menu.addItem(deleteMaskItem)
+
+            // 11. Link Mask / Unlink Mask
+            let linkMaskTitle = session.activeLayer?.mask?.isLinked == false ? "Link Mask" : "Unlink Mask"
+            let linkMaskItem = NSMenuItem(title: linkMaskTitle, action: #selector(toggleMaskLinkAction), keyEquivalent: "")
+            linkMaskItem.target = self
+            linkMaskItem.isEnabled = validateMenuItem(linkMaskItem)
+            menu.addItem(linkMaskItem)
+
+            menu.addItem(NSMenuItem.separator())
+
+            // 12. Hide Layer / Show Layer
+            let visibilityTitle = session.activeLayer?.isVisible == false ? "显示图层" : "隐藏图层"
+            let visibilityItem = NSMenuItem(title: visibilityTitle, action: #selector(toggleVisibilityAction), keyEquivalent: "")
+            visibilityItem.target = self
+            visibilityItem.isEnabled = validateMenuItem(visibilityItem)
+            menu.addItem(visibilityItem)
+
+            return menu
+        }
+
+        func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+            switch menuItem.action {
+            case #selector(duplicateLayerAction):
+                return session.canEditLayers && session.activeLayer != nil
+            case #selector(renameLayerAction):
+                return session.canEditLayers && session.activeLayer != nil && session.selectedLayerIDs.count == 1
+            case #selector(deleteLayerAction):
+                return session.canEditLayers && session.activeLayer != nil
+            case #selector(toggleClippingMaskAction):
+                return session.activeLayerID.map { session.canToggleClippingMask($0) } ?? false
+            case #selector(groupSelectedLayersAction):
+                return session.canEditLayers && session.document != nil && (session.document?.layers.count ?? 0) < 10_000 && !session.selectedLayerIDs.isEmpty
+            case #selector(moveOutOfFolderAction):
+                return session.canEditLayers && session.activeLayer?.parentID != nil
+            case #selector(mergeLayersAction):
+                return session.canMergeLayers
+            case #selector(addWhiteMaskAction), #selector(addBlackMaskAction):
+                return session.canEditMask && session.activeLayer?.mask == nil
+            case #selector(toggleMaskAction):
+                return session.canEditMask && session.activeLayer?.mask != nil
+            case #selector(deleteMaskAction):
+                return session.canEditMask && session.activeLayer?.mask != nil
+            case #selector(toggleMaskLinkAction):
+                return session.canEditLayers && session.activeLayer?.mask != nil && session.activeLayer?.isGroup == false && session.activeLayer?.adjustment == nil
+            case #selector(toggleVisibilityAction):
+                return session.canEditLayers && session.activeLayer != nil
+            default:
+                if menuItem.submenu != nil && menuItem.title == "Add Mask" {
+                    return session.canEditMask && session.activeLayer?.mask == nil
+                }
+                return true
+            }
+        }
+
+        @objc func duplicateLayerAction(_ sender: Any?) {
+            session.duplicateActiveLayer()
+        }
+
+        @objc func renameLayerAction(_ sender: Any?) {
+            guard session.canEditLayers, let id = session.activeLayerID else { return }
+            session.renamingLayerID = id
+        }
+
+        @objc func deleteLayerAction(_ sender: Any?) {
+            session.deleteLayerOrMask()
+        }
+
+        @objc func toggleClippingMaskAction(_ sender: Any?) {
+            if let id = session.activeLayerID { session.toggleClippingMask(id) }
+        }
+
+        @objc func groupSelectedLayersAction(_ sender: Any?) {
+            session.groupSelectedLayers()
+        }
+
+        @objc func moveOutOfFolderAction(_ sender: Any?) {
+            session.moveActiveLayerOutOfGroup()
+        }
+
+        @objc func mergeLayersAction(_ sender: Any?) {
+            session.mergeLayers()
+        }
+
+        @objc func addWhiteMaskAction(_ sender: Any?) {
+            guard let id = session.activeLayerID else { return }
+            session.selectLayerTarget(id, mask: false)
+            session.addMask(revealing: true)
+        }
+
+        @objc func addBlackMaskAction(_ sender: Any?) {
+            guard let id = session.activeLayerID else { return }
+            session.selectLayerTarget(id, mask: false)
+            session.addMask(revealing: false)
+        }
+
+        @objc func toggleMaskAction(_ sender: Any?) {
+            guard let id = session.activeLayerID else { return }
+            session.selectLayerTarget(id, mask: false)
+            session.toggleLayerMask()
+        }
+
+        @objc func deleteMaskAction(_ sender: Any?) {
+            guard let id = session.activeLayerID else { return }
+            session.selectLayerTarget(id, mask: false)
+            session.deleteLayerMask()
+        }
+
+        @objc func toggleMaskLinkAction(_ sender: Any?) {
+            if let id = session.activeLayerID { session.toggleMaskLink(id) }
+        }
+
+        @objc func toggleVisibilityAction(_ sender: Any?) {
+            guard let id = session.activeLayerID else { return }
+            session.toggleLayerVisibility(id)
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
@@ -260,6 +470,44 @@ final class LayerTableView: NSTableView {
     private var clippingTracking: NSTrackingArea?
     private var clippingMonitor: Any?
     private var clippingCursorActive = false
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = convert(event.locationInWindow, from: nil)
+        let row = row(at: point)
+        guard row >= 0, row < numberOfRows else { return nil }
+        guard let coordinator = delegate as? NativeLayerList.Coordinator else { return nil }
+        guard let targetLayer = coordinator.layer(for: row) else { return nil }
+        let currentSession = session ?? coordinator.session
+
+        let cell = view(atColumn: 0, row: row, makeIfNecessary: false) as? LayerCell
+        let isEffect = cell?.selectEffect(at: event.locationInWindow, editing: false) == true
+        if !isEffect {
+            currentSession.effectSelection = nil
+            let thumb = thumbnail(at: point)
+            let isMaskThumb = thumb?.isMaskTarget == true
+            let isLayerThumb = thumb?.loadsSelection == true
+
+            if selectedRowIndexes.contains(row) {
+                if isMaskThumb {
+                    currentSession.selectLayerTarget(targetLayer.id, mask: true)
+                } else if isLayerThumb {
+                    currentSession.selectLayerTarget(targetLayer.id, mask: false)
+                } else {
+                    currentSession.selectLayers(currentSession.selectedLayerIDs, primary: targetLayer.id)
+                }
+            } else {
+                selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+                window?.makeFirstResponder(self)
+                if isMaskThumb {
+                    currentSession.selectLayerTarget(targetLayer.id, mask: true)
+                } else {
+                    currentSession.selectLayerTarget(targetLayer.id, mask: false)
+                }
+            }
+        }
+
+        return coordinator.contextMenu(for: row)
+    }
     private static func clippingCursor(releasing: Bool) -> NSCursor {
         let image = NSImage(size: NSSize(width: 30, height: 28), flipped: false) { _ in
             let arrow = NSImage(systemSymbolName: "arrow.turn.down.right", accessibilityDescription: nil)!
@@ -601,16 +849,6 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
             dimensions.trailingAnchor.constraint(equalTo: nameLabel.trailingAnchor),
             dimensions.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 3)
         ])
-        let menu = NSMenu()
-        for (title, action) in [("重命名…", #selector(rename)), ("显示/隐藏图层", #selector(toggleVisibility)),
-                                ("添加白色蒙版", #selector(addWhiteMask)), ("添加黑色蒙版", #selector(addBlackMask)),
-                                ("启用/禁用蒙版", #selector(toggleMask)), ("删除蒙版", #selector(deleteMask)), ("释放剪贴蒙版", #selector(removeLiveMask)),
-                                ("移出文件夹", #selector(moveOut)), ("删除图层/文件夹", #selector(deleteLayer))] {
-            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-            item.target = self
-            menu.addItem(item)
-        }
-        self.menu = menu
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -680,7 +918,7 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
         // A reused cell must not carry another row's half-finished rename.
         if renaming, layerID != layer.id { restoreLabel() }
         if !renaming { nameLabel.stringValue = (layer.maskSourceID == nil ? "" : "↳ ") + layer.name }
-        dimensions.stringValue = layer.liveText != nil ? "Text" : layer.adjustment != nil ? "Adjustment · Double-click to edit" : layer.isGroup ? "文件夹" : "\(Int(layer.size.width.rounded())) × \(Int(layer.size.height.rounded())) px"
+        dimensions.stringValue = layer.liveText != nil ? "Text · Double-click to edit" : layer.adjustment != nil ? "Adjustment · Double-click to edit" : layer.isGroup ? "文件夹" : "\(Int(layer.size.width.rounded())) × \(Int(layer.size.height.rounded())) px"
         if let source = layer.maskSourceID {
             let sourceName = session.document?.layers.first(where: { $0.id == source })?.name ?? "缺失源图层"
             dimensions.stringValue = "Clipped to \(sourceName)"
@@ -784,30 +1022,9 @@ private final class LayerCell: NSTableCellView, NSTextFieldDelegate {
         session?.selectLayerTarget(layerID, mask: true)
         if NSApp.currentEvent?.modifierFlags.contains(.shift) == true { session?.toggleLayerMask() }
     }
-    @objc private func addWhiteMask() { selectImage(); session?.addMask() }
-    @objc private func addBlackMask() { selectImage(); session?.addMask(revealing: false) }
-    @objc private func toggleMask() { selectImage(); session?.toggleLayerMask() }
-    @objc private func removeLiveMask() { if let layerID { session?.removeLiveMask(from: layerID) } }
-    @objc private func deleteMask() { selectImage(); session?.deleteLayerMask() }
     @objc private func toggleExpansion() { if let layerID { session?.toggleGroupExpansion(layerID) } }
-    @objc private func moveOut() {
-        guard let session, let layerID else { return }
-        session.selectLayer(layerID)
-        session.moveActiveLayerOutOfGroup()
-    }
     private var thumbnailKey: ThumbnailKey?
     @objc private func toggleVisibility() { if let layerID { session?.toggleLayerVisibility(layerID) } }
-    /// Delete on a row that's part of a multi-selection removes the whole selection, like the trash button.
-    @objc private func deleteLayer() {
-        guard let layerID, let session else { return }
-        if session.selectedLayerIDs.count > 1, session.selectedLayerIDs.contains(layerID) { session.deleteSelectedLayers() }
-        else { session.deleteLayer(layerID) }
-    }
-    @objc private func rename() {
-        guard let session, session.canEditLayers, let layerID else { return }
-        session.activeLayerID = layerID
-        session.renamingLayerID = layerID
-    }
     /// Adjustment layers' icons, a little smaller than a bare symbol shows in the thumbnail (roughly
     /// 15.5 pt instead of 18). Drawn into a 36 pt template image (the thumbnail's size), which the button
     /// shows 1:1 and still tints; 1.21× the symbol's natural size lands the glyph there.

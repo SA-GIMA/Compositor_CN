@@ -7,17 +7,21 @@ struct GradientControls: View {
         HStack(spacing: 12) {
             Text("渐变").font(ToolHeaderStyle.titleFont)
             Picker("形状", selection: $session.gradientSettings.shape) {
-                ForEach(GradientShape.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                ForEach(GradientShape.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
             .help("线性沿端点连线延伸；径向从起点向外扩散")
             swatch
             Picker("颜色", selection: $session.gradientSettings.style) {
-                ForEach(GradientStyle.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                ForEach(GradientStyle.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
             }
             .labelsHidden().fixedSize()
             Toggle("反向", isOn: $session.gradientSettings.reversed)
-            Text("不透明度")
+            Text("不透明度").scrubbable(sensitivity: 0.01, value: $session.gradientSettings.opacity, range: 0.01...1)
             Slider(value: $session.gradientSettings.opacity, in: 0.01...1).frame(width: 100)
             TextField("不透明度", value: Binding<Double>(get: { Double(session.gradientSettings.opacity * 100) },
                 set: { session.gradientSettings.opacity = $0.isFinite ? CGFloat(min(100, max(1, $0)) / 100) : 1 }),

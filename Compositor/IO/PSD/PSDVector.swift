@@ -17,7 +17,7 @@ nonisolated enum PSDVector {
         var notes: [String]
     }
 
-    static func live(extra: [String: Data], canvas: CGSize, remainingPixels: Int = 100_000_000) throws -> Live? {
+    static func live(extra: [String: Data], canvas: CGSize, remainingPixels: Int = DocumentLimits.documentPixelBudget) throws -> Live? {
         let stroke = extra["vstk"]
         let fillEnabled = stroke.flatMap { bool($0, key: "fillEnabled") } ?? (extra["SoCo"] != nil)
         let strokeEnabled = stroke.flatMap { bool($0, key: "strokeEnabled") } ?? false
@@ -39,7 +39,7 @@ nonisolated enum PSDVector {
         return Live(style: style, bounds: box, image: image, notes: notes)
     }
 
-    static func raster(extra: [String: Data], canvas: CGSize, remainingPixels: Int = 100_000_000) throws -> Raster? {
+    static func raster(extra: [String: Data], canvas: CGSize, remainingPixels: Int = DocumentLimits.documentPixelBudget) throws -> Raster? {
         guard let mask = extra["vmsk"] ?? extra["vsms"],
               let path = path(from: mask, canvas: canvas) else { return nil }
         let fill = extra["SoCo"].flatMap(rgb)
@@ -51,7 +51,7 @@ nonisolated enum PSDVector {
         guard fillEnabled && fill != nil || strokeEnabled && strokeColor != nil else { return nil }
         guard CGFloat(strokeWidth).isFinite else { return nil }
         if strokeEnabled {
-            guard (0...30_000).contains(strokeWidth) else { throw ImageImportError.tooLarge }
+            guard (0...DocumentLimits.maxSideExtent).contains(strokeWidth) else { throw ImageImportError.tooLarge }
         }
         var box = path.boundingBoxOfPath
         if strokeEnabled { box = box.insetBy(dx: -ceil(strokeWidth / 2 + 1), dy: -ceil(strokeWidth / 2 + 1)) }
@@ -84,7 +84,7 @@ nonisolated enum PSDVector {
     /// Rejects sizes that would trap on `Int(...)` or exceed the 30,000 px / remaining-pixel budget.
     private static func pixelSize(_ size: CGSize, remainingPixels: Int) throws -> (width: Int, height: Int)? {
         guard size.width.isFinite, size.height.isFinite else { return nil }
-        let maxDimension: CGFloat = 30_000
+        let maxDimension: CGFloat = DocumentLimits.maxSideExtent
         guard abs(size.width) <= maxDimension, abs(size.height) <= maxDimension else {
             throw ImageImportError.tooLarge
         }

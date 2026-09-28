@@ -5,7 +5,7 @@ actor CanvasResizer {
     static let shared = CanvasResizer()
 
     func resize(_ snapshot: ProjectSnapshot, to options: CanvasSizeOptions) throws -> ProjectSnapshot {
-        guard (1...30_000).contains(options.width), (1...30_000).contains(options.height),
+        guard (1...DocumentLimits.maxSide).contains(options.width), (1...DocumentLimits.maxSide).contains(options.height),
               (0...8).contains(options.anchor) else { throw ProjectError.tooLarge }
         let old = snapshot.manifest
         let offset = options.offset(fromWidth: old.width, height: old.height)
@@ -35,7 +35,7 @@ actor CanvasResizer {
         // intersection remains transparent, including holes in the existing artwork.
         if let color = options.fill, options.width > old.width || options.height > old.height {
             let used = images.values.reduce(0) { $0 + $1.image.width * $1.image.height }
-            guard options.width * options.height <= 100_000_000 - used,
+            guard options.width * options.height <= DocumentLimits.documentPixelBudget - used,
                   manifest.layers.count < 10_000 else { throw ProjectError.tooLarge }
             guard [color.red, color.green, color.blue].allSatisfy({ $0.isFinite && (0...1).contains($0) }) else {
                 throw ProjectError.invalid

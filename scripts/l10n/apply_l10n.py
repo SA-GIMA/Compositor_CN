@@ -29,7 +29,12 @@ extension FilterKind {
         case .gaussianBlur: "高斯模糊"
         case .motionBlur: "动感模糊"
         case .addNoise: "添加杂色"
+        case .vignette: "晕影"
+        case .bloomGlow: "辉光/发光"
+        case .dither: "抖动"
+        case .tonalContrast: "色调对比"
         case .lensCorrection: "镜头校正"
+        case .cameraRaw: "Camera Raw 滤镜"
         case .removeBackground: "移除背景"
         case .contentAwareFill: "内容识别填充"
         case .curves: "曲线"
@@ -38,6 +43,7 @@ extension FilterKind {
         case .grain: "颗粒"
         case .blackWhite: "黑白"
         case .colorBalance: "色彩平衡"
+case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -98,9 +104,13 @@ extension AdjustmentKind {
         case .exposure: "曝光度"
         case .gradientMap: "渐变映射"
         case .grain: "颗粒"
+        case .addNoise: "添加杂色"
+        case .gaussianBlur: "高斯模糊"
+        case .motionBlur: "动感模糊"
         case .invert: "反相"
         case .blackWhite: "黑白"
         case .colorBalance: "色彩平衡"
+case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -228,6 +238,8 @@ extension LayerEffectKind {
         case .colorOverlay: "颜色叠加"
         case .innerShadow: "内阴影"
         case .outerGlow: "外发光"
+        case .innerGlow: "内发光"
+case .outerGlow: "外发光"
         }
     }
 }
@@ -339,6 +351,230 @@ extension EditorSession.SelectionAmountOperation {
         case .expand: "扩展"
         case .contract: "收缩"
         case .feather: "羽化"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/CameraRawColor.swift",
+        "nonisolated enum CameraRawCurvePage: String, CaseIterable, Sendable { case parametric = \"Parametric\", point = \"Point\" }",
+        """
+extension CameraRawCurvePage {
+    nonisolated var displayName: String {
+        switch self {
+        case .parametric: "参数化"
+        case .point: "点"
+        }
+    }
+}
+
+extension CameraRawMixerPage {
+    nonisolated var displayName: String {
+        switch self {
+        case .hsl: "HSL"
+        case .color: "颜色"
+        case .point: "点颜色"
+        }
+    }
+}
+
+extension CameraRawGradePage {
+    nonisolated var displayName: String {
+        switch self {
+        case .threeWay: "三向"
+        case .shadows: "阴影"
+        case .midtones: "中间调"
+        case .highlights: "高光"
+        case .global: "全局"
+        }
+    }
+}
+
+extension CameraRawPointChannel {
+    nonisolated var displayName: String {
+        switch self {
+        case .rgb: "RGB"
+        case .red: "红"
+        case .green: "绿"
+        case .blue: "蓝"
+        }
+    }
+}
+
+extension CameraRawMixerTab {
+    nonisolated var displayName: String {
+        switch self {
+        case .hue: "色相"
+        case .saturation: "饱和度"
+        case .luminance: "明度"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/CameraRaw.swift",
+        "nonisolated enum CameraRawWhiteBalance: String, CaseIterable, Sendable {",
+        """
+extension CameraRawWhiteBalance {
+    nonisolated var displayName: String {
+        switch self {
+        case .custom: "自定义"
+        case .auto: "自动"
+        }
+    }
+}
+
+extension CameraRawGlowStyle {
+    nonisolated var displayName: String {
+        switch self {
+        case .diffusion: "扩散"
+        case .bloom: "辉光"
+        case .halation: "光晕"
+        }
+    }
+}
+
+extension CameraRawVignetteStyle {
+    nonisolated var displayName: String {
+        switch self {
+        case .highlightPriority: "高光优先"
+        case .colorPriority: "颜色优先"
+        case .paintOverlay: "绘制叠加"
+        }
+    }
+}
+
+extension CameraRawScopeMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .histogram: "直方图"
+        case .vectorscope: "矢量示波器"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/CameraRawGeometryCalibration.swift",
+        "nonisolated enum CameraRawUprightMode: String, CaseIterable, Sendable {",
+        """
+extension CameraRawUprightMode {
+    nonisolated var displayName: String {
+        switch self {
+        case .off: "关闭"
+        case .guided: "参考线"
+        }
+    }
+}
+
+extension CameraRawProjection {
+    nonisolated var displayName: String {
+        switch self {
+        case .perspective: "透视"
+        case .rectilinear: "直线"
+        }
+    }
+}
+
+extension CameraRawProcessVersion {
+    nonisolated var displayName: String {
+        switch self {
+        case .version1: "版本 1"
+        case .version2: "版本 2"
+        case .version3: "版本 3"
+        case .version4: "版本 4"
+        case .version5: "版本 5"
+        case .version6: "版本 6"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/Dither.swift",
+        "nonisolated enum DitherStyle: String, CaseIterable, Sendable {",
+        """
+extension DitherStyle {
+    nonisolated var displayName: String {
+        switch self {
+        case .atkinson: "Atkinson（经典 Mac）"
+        case .floydSteinberg: "Floyd–Steinberg"
+        case .bayer2: "Bayer 2 × 2"
+        case .bayer4: "Bayer 4 × 4"
+        case .bayer8: "Bayer 8 × 8"
+        case .dots: "半调网点"
+        case .lines: "半调线条"
+        case .diamonds: "半调菱形"
+        case .patterns: "Mac 图案"
+        case .ascii: "ASCII"
+        }
+    }
+}
+
+extension DitherPixelShape {
+    nonisolated var displayName: String {
+        switch self {
+        case .square: "方形"
+        case .dot: "圆点"
+        }
+    }
+}
+
+extension DitherColors {
+    nonisolated var displayName: String {
+        switch self {
+        case .blackWhite: "黑白"
+        case .twoColors: "双色"
+        case .original: "原色"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/ImageTrim.swift",
+        "public enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {",
+        """
+extension TrimBasedOn {
+    nonisolated var displayName: String {
+        switch self {
+        case .transparentPixels: "透明像素"
+        case .topLeftPixelColor: "左上角像素颜色"
+        case .bottomRightPixelColor: "右下角像素颜色"
+        }
+    }
+}
+""",
+    ),
+    (
+        "Document/Guides.swift",
+        "enum Preset: String, CaseIterable, Identifiable {",
+        """
+extension GridAppearance.Preset {
+    nonisolated var displayName: String {
+        switch self {
+        case .lightGray: "浅灰"
+        case .lightBlue: "浅蓝"
+        case .lightRed: "浅红"
+        case .green: "绿色"
+        case .mediumBlue: "中蓝"
+        case .yellow: "黄色"
+        case .magenta: "洋红"
+        case .cyan: "青色"
+        case .black: "黑色"
+        case .custom: "自定义"
+        }
+    }
+}
+
+extension GridAppearance.Style {
+    nonisolated var displayName: String {
+        switch self {
+        case .lines: "实线"
+        case .dashedLines: "虚线"
+        case .dots: "点线"
         }
     }
 }
@@ -813,26 +1049,61 @@ def _find_block_end(text: str, brace: int) -> int | None:
     return None
 
 
+def _file_scope_insert_index(text: str, around: int) -> int:
+    """Return an index at file scope after the top-level block that contains `around`."""
+    depth = 0
+    block_start = None
+    for i, ch in enumerate(text):
+        if ch == "{":
+            if depth == 0:
+                block_start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and block_start is not None and block_start < around < i:
+                return i + 1
+    return len(text)
+
+
+def _is_file_scope(text: str, idx: int) -> bool:
+    return text[:idx].count("{") == text[:idx].count("}")
+
+
 def inject_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
-    """Inject or replace the displayName extension for the enum named in enum_sig."""
+    """Inject or replace the displayName extension for the enum named in enum_sig.
+
+    Nested enums (e.g. EditorSession.SelectionAmountOperation) must get their
+    extension at file scope — Swift forbids extensions inside another type.
+    """
     text = path.read_text(encoding="utf-8")
     name_match = re.search(r"enum\s+(\w+)", enum_sig)
     if not name_match:
         return False
     enum_name = name_match.group(1)
     desired = extension_code.strip()
-    ext_marker = f"extension {enum_name} {{"
-    start = text.find(ext_marker)
+    ext_match = re.search(r"extension\s+([\w.]+)\s*\{", desired)
+    ext_full = ext_match.group(1) if ext_match else enum_name
+
+    start = text.find(f"extension {ext_full} {{")
+    if start < 0 and ext_full != enum_name:
+        start = text.find(f"extension {enum_name} {{")
     if start >= 0:
         brace = text.find("{", start)
         end = _find_block_end(text, brace) if brace >= 0 else None
         if end is None:
             return False
         current = text[start:end].strip()
-        if current == desired:
+        if current == desired and _is_file_scope(text, start):
             return False
-        path.write_text(text[:start] + desired + text[end:], encoding="utf-8")
+        text = text[:start] + text[end:]
+        text = text[:start].rstrip() + "\n" + text[start:].lstrip("\n")
+        insert_at = _file_scope_insert_index(text, max(0, start - 1))
+        prefix = text[:insert_at].rstrip()
+        suffix = text[insert_at:].lstrip("\n")
+        text = prefix + "\n\n" + desired + "\n" + (("\n" + suffix) if suffix else "")
+        path.write_text(text, encoding="utf-8")
         return True
+
     idx = text.find(enum_sig)
     if idx < 0:
         return False
@@ -840,8 +1111,51 @@ def inject_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
     end = _find_block_end(text, brace) if brace >= 0 else None
     if end is None:
         return False
-    path.write_text(text[:end] + "\n\n" + desired + "\n" + text[end:], encoding="utf-8")
+    if _is_file_scope(text, idx):
+        path.write_text(text[:end] + "\n\n" + desired + "\n" + text[end:], encoding="utf-8")
+        return True
+    insert_at = _file_scope_insert_index(text, idx)
+    prefix = text[:insert_at].rstrip()
+    suffix = text[insert_at:].lstrip("\n")
+    text = prefix + "\n\n" + desired + "\n" + (("\n" + suffix) if suffix else "")
+    path.write_text(text, encoding="utf-8")
     return True
+
+
+
+def split_dense_foreach_displayname(comp_root: Path) -> None:
+    """Break `Text($0.displayName).tag($0)` ForEach bodies so Xcode can type-check.
+
+    Known pitfall: Xcode 27 + large View.body + this dense generic expression
+    times out (`unable to type-check this expression in reasonable time`).
+    """
+    pat = re.compile(
+        r"ForEach\(([^,]+), id: \\.self\) \{ Text\(\$0\.displayName\)\.tag\(\$0\) \}"
+    )
+    pat2 = re.compile(
+        r"ForEach\(([^)]+)\) \{ Text\(\$0\.displayName\)\.tag\(\$0\) \}"
+    )
+
+    def repl(m: re.Match[str]) -> str:
+        return (
+            f"ForEach({m.group(1)}, id: \\.self) {{ item in\n"
+            f"                    Text(item.displayName).tag(item)\n"
+            f"                }}"
+        )
+
+    def repl2(m: re.Match[str]) -> str:
+        return (
+            f"ForEach({m.group(1)}) {{ item in\n"
+            f"                    Text(item.displayName).tag(item)\n"
+            f"                }}"
+        )
+
+    for path in comp_root.rglob("*.swift"):
+        text = path.read_text(encoding="utf-8")
+        updated = pat.sub(repl, text)
+        updated = pat2.sub(repl2, updated)
+        if updated != text:
+            path.write_text(updated, encoding="utf-8")
 
 
 def apply_pairs(path: Path, pairs: list[tuple[str, str]]) -> tuple[int, int]:
@@ -852,6 +1166,10 @@ def apply_pairs(path: Path, pairs: list[tuple[str, str]]) -> tuple[int, int]:
     hit = miss = 0
     for old, new in pairs:
         if old in text:
+            # Expansion patches embed `old` inside `new`; skip when already applied.
+            if old in new and new in text:
+                hit += 1
+                continue
             text = text.replace(old, new)
             hit += 1
         else:
@@ -920,6 +1238,7 @@ def main() -> int:
     print(f"  global pairs applied on {len(swift_files)} files")
 
     patch_remaining_navigations(comp)
+    split_dense_foreach_displayname(comp)
 
     if args.map:
         extra = json.loads(Path(args.map).read_text(encoding="utf-8"))

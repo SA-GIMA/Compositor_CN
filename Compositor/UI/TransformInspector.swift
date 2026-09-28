@@ -19,21 +19,23 @@ struct TransformInspector: View {
             HStack(spacing: 12) {
                 field("X", value: value.origin.x) { $0.origin.x = $1 }.frame(width: 85)
                 field("Y", value: value.origin.y) { $0.origin.y = $1 }.frame(width: 85)
-                TransformValueField(label: "W", value: value.size.width) { resize($0, width: true) }.frame(width: 85)
-                TransformValueField(label: "H", value: value.size.height) { resize($0, width: false) }.frame(width: 85)
+                TransformValueField(label: "W", value: value.size.width, range: 1...30_000) { resize($0, width: true) }.frame(width: 85)
+                TransformValueField(label: "H", value: value.size.height, range: 1...30_000) { resize($0, width: false) }.frame(width: 85)
                 Toggle(isOn: $session.locksTransformRatio) { Image(systemName: "link") }
                     .toggleStyle(.button).help("锁定长宽比")
-                TransformValueField(label: "Scale", suffix: "%", value: value.scalePercent(pixelSize: pixelSize)) { number in
+                TransformValueField(label: "缩放", suffix: "%", value: value.scalePercent(pixelSize: pixelSize), range: 0.1...30_000) { number in
                     change { value in
                         guard number > 0 else { return }
                         value = value.scaled(toPercent: number, pixelSize: pixelSize)
                     }
                 }.frame(width: 110).help("以中心为基准，等比缩放宽高")
-                field("°", value: value.rotation) { $0.rotation = $1.truncatingRemainder(dividingBy: 360) }.frame(width: 75)
+                field("°", value: value.rotation, range: -360...360) { $0.rotation = $1.truncatingRemainder(dividingBy: 360) }.frame(width: 75)
                 Picker("采样", selection: Binding(get: { value.sampling }, set: { sampling in
                     change { $0.sampling = sampling }
                 })) {
-                    ForEach(LayerSampling.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(LayerSampling.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }.frame(width: 170)
                 Button("水平翻转") { change { $0.flipX.toggle() } }
                 Button("垂直翻转") { change { $0.flipY.toggle() } }
@@ -51,8 +53,9 @@ struct TransformInspector: View {
 
     /// 100% scale: the layer's pixels (a blank layer's size before this edit, so typing doesn't compound).
     private var pixelSize: CGSize { session.transformPixelSize ?? session.activeLayer?.size ?? value.size }
-    private func field(_ label: String, value: CGFloat, set: @escaping (inout LayerTransform, CGFloat) -> Void) -> some View {
-        TransformValueField(label: label, value: value) { number in change { set(&$0, number) } }
+    private func field(_ label: String, value: CGFloat, range: ClosedRange<CGFloat> = -30_000...30_000,
+                       set: @escaping (inout LayerTransform, CGFloat) -> Void) -> some View {
+        TransformValueField(label: label, value: value, range: range) { number in change { set(&$0, number) } }
     }
     private func change(_ update: (inout LayerTransform) -> Void) {
         if session.transformEdit == nil { session.beginTransform() }
@@ -78,6 +81,7 @@ private struct TransformValueField: View {
     let label: String
     var suffix: String? = nil
     let value: CGFloat
+    let range: ClosedRange<CGFloat>
     let change: (CGFloat) -> Void
     @State private var text = ""
     @State private var stepper = ArrowStepper()
@@ -85,6 +89,10 @@ private struct TransformValueField: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(label).font(.caption).foregroundStyle(.secondary)
+                .scrubbable(sensitivity: 1, value: Binding(get: { value }, set: { newValue in
+                    change(newValue)
+                    text = Self.formatted(Double(newValue))
+                }), range: range, step: 1)
             TextField(label, text: $text)
                 .textFieldStyle(.roundedBorder).focused($focused)
                 .accessibilityIdentifier("transform\(label)")

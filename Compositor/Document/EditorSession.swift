@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ImageLayer: Identifiable, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool {
@@ -23,7 +24,7 @@ struct ImageLayer: Identifiable, Equatable {
     /// A stroke and drop shadow drawn around the layer, kept apart from its pixels.
     var effects: LayerEffects?
     var text: LayerText?
-    var size: CGSize { transform.size }
+    nonisolated var size: CGSize { transform.size }
 
     init(asset: ImportedImage, origin: CGPoint) {
         self.id = UUID()
@@ -81,7 +82,7 @@ struct CanvasDocument: Equatable {
     // Geometry limit; raster memory limits will be established with image import.
     static func validDimension(_ value: String) -> Int? {
         guard let n = Int(value.trimmingCharacters(in: .whitespaces)),
-              (1...30_000).contains(n) else { return nil }
+              (1...DocumentLimits.maxSide).contains(n) else { return nil }
         return n
     }
 }
@@ -149,7 +150,7 @@ final class EditorSession {
     private var fileRequestWaiters: [CheckedContinuation<Void, Never>] = []
     var canStartProjectOperation: Bool {
         _ = showsBusy // Re-evaluate in the UI when a long operation starts or ends.
-        return selectionAmountOperation == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && adjustmentEditingID == nil && !showsConversionSheet
+        return selectionAmountOperation == nil && colorRange == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && adjustmentEditingID == nil && !showsConversionSheet
     }
     func waitForFileRequest() async {
         while !canStartProjectOperation {
@@ -246,6 +247,7 @@ final class EditorSession {
     @ObservationIgnored var selectionMoveOrigin: DocumentSelection?
     var pixelMove: PixelMove?
     @ObservationIgnored var pixelClipboard: PixelClipboard?
+    @ObservationIgnored var copiedLayer: CopiedLayer?
     var levels: LevelsEdit? { didSet { resumeFileRequests() } }
     var hueSaturation: HueSaturationEdit?
     /// The open filter (Filter menu), and the settings the next one starts from.
@@ -261,12 +263,40 @@ final class EditorSession {
     var selectionAntialiased = true
     /// How far Feather softens the selection's edge each time it is applied, in document pixels.
     var selectionAmountOperation: SelectionAmountOperation? { didSet { resumeFileRequests() } }
+    /// Select > Color Range's panel is open; the selection shown is its preview until OK.
+    var colorRange: ColorRangeEdit? { didSet { resumeFileRequests() } }
+    /// The dialog whose color the picker is open on (`ColorPickerTarget.dialog`).
+    @ObservationIgnored var dialogColorChange: ((PaletteColor) -> Void)?
+    /// A dialog with its own zoomable preview (Export JPEG) is open: the View menu's zoom commands zoom that instead.
+    @ObservationIgnored var previewZoom: ((PreviewZoomCommand) -> Void)?
+    /// The text's style before the font menu started previewing faces on it (see `previewFont`).
+    @ObservationIgnored var fontPreviewOriginal: LayerTextStyle?
     var selectionFeatherAmount = 2
     var wandSettings = WandSettings()
     var objectSelectionSettings = ObjectSelectionSettings()
     var showsPixelGrid = ToolDefaults.bool("pixelGrid", true) { didSet { ToolDefaults.set(showsPixelGrid, "pixelGrid") } }
     /// Layout grid (View > Show > Grid). Off until turned on; independent of the 800% pixel grid.
     var showsGrid = ToolDefaults.bool("grid", false) { didSet { ToolDefaults.set(showsGrid, "grid") } }
+    /// The layout grid's spacing and subdivisions (View > Grid Settings…). The person's, not the project's.
+    var layoutGrid = LayoutGrid(spacing: ToolDefaults.int("gridSpacing", 64), subdivisions: ToolDefaults.int("gridSubdivisions", 8)) {
+        didSet {
+            ToolDefaults.set(layoutGrid.spacing, "gridSpacing")
+            ToolDefaults.set(layoutGrid.subdivisions, "gridSubdivisions")
+        }
+    }
+    /// The layout grid's color, line style and opacity (View > Grid Settings…), also the person's.
+    var gridAppearance = GridAppearance(
+        preset: GridAppearance.Preset(rawValue: ToolDefaults.string("gridColor", "")) ?? .lightGray,
+        customColor: PaletteColor(hex: ToolDefaults.string("gridCustomColor", "")) ?? GridAppearance().customColor,
+        style: GridAppearance.Style(rawValue: ToolDefaults.string("gridStyle", "")) ?? .lines,
+        opacity: ToolDefaults.int("gridOpacity", GridAppearance().opacity)) {
+        didSet {
+            ToolDefaults.set(gridAppearance.preset.rawValue, "gridColor")
+            ToolDefaults.set(gridAppearance.customColor.hex, "gridCustomColor")
+            ToolDefaults.set(gridAppearance.style.rawValue, "gridStyle")
+            ToolDefaults.set(gridAppearance.opacity, "gridOpacity")
+        }
+    }
     /// User guides. Hidden extras do not snap.
     var showsGuides = ToolDefaults.bool("guides", true) { didSet { ToolDefaults.set(showsGuides, "guides") } }
     var showsRulers = ToolDefaults.bool("rulers", false) { didSet { ToolDefaults.set(showsRulers, "rulers") } }
@@ -346,7 +376,14 @@ final class EditorSession {
         if value.isBrushTool { _ = MetalBrushCoverage.shared }
         if value == .crop, cropRect == nil, let document {
             cropRatioChoice = "自由"
-            cropRect = CGRect(origin: .zero, size: document.size)
+            let canvas = CGRect(origin: .zero, size: document.size)
+            // With a selection, the crop starts at its bounds, as Photoshop's does: C, then Return, crops to it.
+            if let selection, !selection.isEmpty {
+                let bounds = selection.path.boundingBoxOfPath.integral.intersection(canvas)
+                cropRect = CropGeometry.valid(bounds) ? bounds : canvas
+            } else {
+                cropRect = canvas
+            }
         }
     }
     /// Tab steps the current tool through its own modes — the setting sitting at the left of its tool bar. Tools
@@ -403,15 +440,12 @@ final class EditorSession {
         let targets = (document?.layers ?? []).filter { selection.contains($0.id) && !carried.contains($0.id) }.map(\.id)
         guard !targets.isEmpty else { return }
         beginEdit(targets.count > 1 ? "复制图层" : "复制图层")
-        var copies: [UUID] = []
-        for id in targets {
-            selectLayer(id)
-            duplicateActiveLayer()
-            if let copy = activeLayerID, copy != id { copies.append(copy) }
-        }
+        // Stacked as Duplicate Layer stacks them: several together above the topmost original.
+        duplicateLayers(targets)
+        let copies = selectedLayerIDs.subtracting(selection)
         guard !copies.isEmpty else { endEdit(); selectLayers(selection, primary: primary); return }
-        transformDuplicate = (copies, selection, primary)
-        selectLayers(Set(copies), primary: copies.last)
+        transformDuplicate = (Array(copies), selection, primary)
+        selectLayers(copies, primary: activeLayerID)
         beginTransform(persistent: false)
     }
     func commitTransform() {
@@ -562,7 +596,7 @@ final class EditorSession {
     var isModified: Bool { history.isModified }
     var canUseHistory: Bool {
         _ = showsBusy
-        return selectionAmountOperation == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && transformEdit == nil && !showsConversionSheet
+        return selectionAmountOperation == nil && colorRange == nil && textDraft == nil && !isProjectBusy && !isImporting && brushStroke == nil && warpStroke == nil && levels == nil && !showsNewDocument && !showsImporter && renamingLayerID == nil && importError == nil && transformEdit == nil && !showsConversionSheet
     }
     var canUndo: Bool { canUseHistory && (history.canUndo || gradientEdit != nil) }
     var canRedo: Bool { canUseHistory && history.canRedo }
@@ -599,7 +633,7 @@ final class EditorSession {
     var activeLayer: ImageLayer? { document?.layers.first { $0.id == activeLayerID } }
     var canEditLayers: Bool {
         _ = showsBusy
-        return selectionAmountOperation == nil && textDraft == nil && document != nil && brushStroke == nil && warpStroke == nil && !isProjectBusy && !isImporting && !showsNewDocument && !showsImporter && renamingLayerID == nil && transformEdit == nil && cropRect == nil && gradientEdit == nil && pixelMove == nil && hueSaturation == nil && levels == nil && filterEdit == nil && adjustmentEditingID == nil
+        return selectionAmountOperation == nil && colorRange == nil && textDraft == nil && document != nil && brushStroke == nil && warpStroke == nil && !isProjectBusy && !isImporting && !showsNewDocument && !showsImporter && renamingLayerID == nil && transformEdit == nil && cropRect == nil && gradientEdit == nil && pixelMove == nil && hueSaturation == nil && levels == nil && filterEdit == nil && adjustmentEditingID == nil
     }
 
     func addBlankLayer() {
@@ -752,8 +786,8 @@ final class EditorSession {
                 } ?? 0
                 if RawImporter.matches(url) {
                     guard let size = RawImporter.pixelSize(url) else { throw ImageImportError.unreadable }
-                    guard size.width <= 30_000, size.height <= 30_000,
-                          size.width * size.height <= 100_000_000 - usedPixels else { throw ImageImportError.tooLarge }
+                    guard size.width <= DocumentLimits.maxSide, size.height <= DocumentLimits.maxSide,
+                          size.width * size.height <= DocumentLimits.documentPixelBudget - usedPixels else { throw ImageImportError.tooLarge }
                     guard let settings = await developRaw(url) else { continue }
                     // Seconds of work: off the main actor, or pressing Import freezes the window.
                     guard let developed = await RawImporter.Queue.shared.develop(url, settings: settings, limit: nil)
@@ -761,11 +795,24 @@ final class EditorSession {
                     let thumbnail = try PixelAdjust.thumbnail(of: developed)
                     insert(ImportedImage(image: developed, thumbnail: thumbnail,
                                          name: url.deletingPathExtension().lastPathComponent), centeredAt: point)
+                } else if UTType(filenameExtension: url.pathExtension)?.conforms(to: .svg) == true {
+                    let asset = try await ImageImporter.shared.decodeSVG(url, fitting: document?.size,
+                                                                         remainingPixels: DocumentLimits.documentPixelBudget - usedPixels)
+                    insert(asset, centeredAt: point)
                 } else if PSDReader.matches(url) {
                     beginPSDReading(title: "打开 “\(url.lastPathComponent)”？", confirmTitle: "导入")
                     let imported: PSDImport
                     do {
-                        let parsed = try await ImageImporter.shared.loadPhotoshop(url, remainingPixels: 100_000_000 - usedPixels)
+                        let parsed = try await ImageImporter.shared.loadPhotoshop(url, remainingPixels: DocumentLimits.documentPixelBudget - usedPixels)
+                        // Only a background: Photoshop writes no layer records, just the merged image, so that is
+                        // what comes in, as one layer.
+                        if parsed.layers.isEmpty {
+                            endPSDReading()
+                            let asset = try await ImageImporter.shared.decode(url, remainingPixels: DocumentLimits.documentPixelBudget - usedPixels,
+                                                                              flattenedPhotoshop: true)
+                            insert(asset, centeredAt: point)
+                            continue
+                        }
                         let assets = try await ImageImporter.shared.photoshopAssets(parsed)
                         imported = try PSDDocumentBuilder.makeImport(parsed, assets: assets)
                     } catch {
@@ -775,7 +822,7 @@ final class EditorSession {
                     if !(await finishPSDReading(imported.conversions)) { continue }
                     try insertPhotoshop(imported, named: url.deletingPathExtension().lastPathComponent, centeredAt: point)
                 } else {
-                    let asset = try await ImageImporter.shared.decode(url, remainingPixels: 100_000_000 - usedPixels)
+                    let asset = try await ImageImporter.shared.decode(url, remainingPixels: DocumentLimits.documentPixelBudget - usedPixels)
                     insert(asset, centeredAt: point)
                 }
             } catch {
@@ -891,7 +938,7 @@ final class EditorSession {
 
     /// `emptyLayer` starts the canvas with a selected blank "Layer 1", as File > New does.
     func createDocument(width: Int, height: Int, emptyLayer: Bool = false) {
-        guard !isProjectBusy, !isImporting, (1...30_000).contains(width), (1...30_000).contains(height) else { return }
+        guard !isProjectBusy, !isImporting, (1...DocumentLimits.maxSide).contains(width), (1...DocumentLimits.maxSide).contains(height) else { return }
         commitTransform()
         beginEdit("新建画布")
         defer { endEdit() }
@@ -913,5 +960,15 @@ final class EditorSession {
     func zoom(to value: CGFloat, anchor: CGPoint? = nil) {
         guard let document else { return }
         viewport.setZoom(value, anchoredAt: anchor ?? viewport.center, documentSize: document.size)
+    }
+
+    /// Step through stable keyboard zoom levels while keeping the viewport center fixed.
+    enum PreviewZoomCommand { case zoomIn, zoomOut, fit, actual }
+
+    func zoomKeyboard(by step: Int) {
+        guard let document, step != 0 else { return }
+        let target = viewport.keyboardZoomTarget(by: step)
+        guard target != viewport.zoom else { return }
+        viewport.setZoom(target, anchoredAt: viewport.center, documentSize: document.size)
     }
 }

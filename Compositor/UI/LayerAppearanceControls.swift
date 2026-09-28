@@ -14,6 +14,11 @@ struct LayerAppearanceControls: View {
             }.disabled(!session.canEditAppearance)
             HStack(spacing: 6) {
                 Text("不透明度").font(.caption)
+                    .scrubbable(sensitivity: 1,
+                                value: Binding<Double>(get: { (session.activeLayer?.opacity ?? 1) * 100 }, set: step),
+                                range: 0...100,
+                                onStart: { session.beginOpacityEdit() },
+                                onEnd: { session.finishOpacityEdit() })
                 Slider(value: Binding(get: { session.activeLayer?.opacity ?? 1 },
                                       set: { session.setLayerOpacity($0) }), in: 0...1,
                        onEditingChanged: { if $0 { session.beginOpacityEdit() } else { session.finishOpacityEdit() } })

@@ -11,6 +11,13 @@ struct ProjectTests {
         return url
     }
 
+    /// Saving writes `ProjectManifest.current` and `load` rejects anything outside
+    /// `ProjectManifest.supported`, so the two have to agree or the app cannot reopen its own
+    /// documents. This checks that directly, without touching the disk.
+    @Test func theCurrentFormatVersionIsOneTheReaderAccepts() {
+        #expect(ProjectManifest.supported.contains(ProjectManifest.current))
+    }
+
     @Test func projectRoundTripSurvivesSourceRemovalAndPackageMove() async throws {
         let root = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: root) }

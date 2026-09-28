@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The open filter's panel: its settings, Preview, and Cancel / OK.
@@ -10,6 +11,10 @@ struct FilterSheet: View {
         change(&value)
         session.updateFilter(value, preview: edit?.preview ?? true)
     }
+
+    private var isCameraRaw: Bool { edit?.kind == .cameraRaw }
+    /// The widest slider title in the panel, so every slider starts and ends in the same place.
+    @State private var labelWidth: CGFloat = 60
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -25,31 +30,35 @@ struct FilterSheet: View {
                                     pick: { session.openGradientMapColorPicker(highlights: $0) })
             case .blackWhite:
                 // Each slider says how bright that family of colors becomes, as Photoshop's do.
-                control("红色", \.blackWhite.reds, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
-                control("黄色", \.blackWhite.yellows, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
-                control("绿色", \.blackWhite.greens, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
-                control("青色", \.blackWhite.cyans, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
-                control("蓝色", \.blackWhite.blues, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
-                control("洋红", \.blackWhite.magentas, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false)
+                control("红色", \.blackWhite.reds, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(0))
+                control("黄色", \.blackWhite.yellows, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(60))
+                control("绿色", \.blackWhite.greens, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(120))
+                control("青色", \.blackWhite.cyans, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(180))
+                control("蓝色", \.blackWhite.blues, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(240))
+                control("洋红", \.blackWhite.magentas, range: BlackWhiteSettings.range, unit: "%", decimals: 0, logarithmic: false, track: .luminance(300))
                 Toggle("着色", isOn: flag(\.blackWhite.tint))
                     .help("在保留影调的同时为结果上色，例如棕褐或蓝晒")
                 if settings.blackWhite.tint {
-                    control("色相", \.blackWhite.tintHue, range: 0...360, unit: "°", decimals: 0, logarithmic: false)
-                    control("饱和度", \.blackWhite.tintSaturation, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                    control("色相", \.blackWhite.tintHue, range: 0...360, unit: "°", decimals: 0, logarithmic: false, track: .plain)
+                    control("饱和度", \.blackWhite.tintSaturation, range: 0...100, unit: "%", decimals: 0, logarithmic: false,
+                            track: .saturation(settings.blackWhite.tintHue))
                 }
+            case .cameraRaw:
+                CameraRawControls(session: session)
+                    .frame(maxHeight: .infinity, alignment: .top)
             case .colorBalance:
                 Text("阴影").font(.headline)
-                control("青色 / 红色", \.colorBalance.shadowCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("洋红 / 绿色", \.colorBalance.shadowMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("黄色 / 蓝色", \.colorBalance.shadowYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("青色 / 红色", \.colorBalance.shadowCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.cyanRedTrack)
+                control("洋红 / 绿色", \.colorBalance.shadowMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.magentaGreenTrack)
+                control("黄色 / 蓝色", \.colorBalance.shadowYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.yellowBlueTrack)
                 Text("中间调").font(.headline)
-                control("青色 / 红色", \.colorBalance.midCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("洋红 / 绿色", \.colorBalance.midMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("黄色 / 蓝色", \.colorBalance.midYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("青色 / 红色", \.colorBalance.midCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.cyanRedTrack)
+                control("洋红 / 绿色", \.colorBalance.midMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.magentaGreenTrack)
+                control("黄色 / 蓝色", \.colorBalance.midYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.yellowBlueTrack)
                 Text("高光").font(.headline)
-                control("青色 / 红色", \.colorBalance.highlightCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("洋红 / 绿色", \.colorBalance.highlightMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
-                control("黄色 / 蓝色", \.colorBalance.highlightYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false)
+                control("青色 / 红色", \.colorBalance.highlightCyanRed, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.cyanRedTrack)
+                control("洋红 / 绿色", \.colorBalance.highlightMagentaGreen, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.magentaGreenTrack)
+                control("黄色 / 蓝色", \.colorBalance.highlightYellowBlue, range: ColorBalanceSettings.range, unit: "", decimals: 0, logarithmic: false, track: Self.yellowBlueTrack)
                 Toggle("保留明度", isOn: flag(\.colorBalance.preserveLuminosity))
                     .help("之后恢复每个像素的亮度，只改变颜色")
             case .grain:
@@ -61,7 +70,9 @@ struct FilterSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Picker("质量", selection: Binding(get: { settings.backgroundQuality },
                                                      set: { new in update { $0.backgroundQuality = new } })) {
-                    ForEach(BackgroundQuality.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(BackgroundQuality.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.segmented).labelsHidden()
                 .help("基础速度快；高级会对照图层细节优化蒙版，适合毛发")
@@ -83,12 +94,49 @@ struct FilterSheet: View {
                 control("距离", \.distance, range: 1...2000, unit: "px", decimals: 0, logarithmic: true)
             case .addNoise:
                 control("数量", \.amount, range: 0.1...400, unit: "%", decimals: 1, logarithmic: true)
-                Picker("分布", selection: flag(\.gaussian)) {
-                    Text("平均分布").tag(false)
-                    Text("高斯分布").tag(true)
+                HStack(spacing: 10) {
+                    Text("分布")
+                    Picker("分布", selection: flag(\.gaussian)) {
+                        Text("平均分布").tag(false)
+                        Text("高斯分布").tag(true)
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
                 }
-                .pickerStyle(.segmented)
                 Toggle("单色", isOn: flag(\.monochromatic))
+            case .dither:
+                ditherControls
+            case .vignette:
+                HStack(spacing: 8) {
+                    Text("颜色").frame(width: 95, alignment: .leading)
+                    Button { session.openVignetteColorPicker() } label: {
+                        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        shape.fill(Color(.sRGB, red: settings.vignetteColor.red,
+                                         green: settings.vignetteColor.green, blue: settings.vignetteColor.blue))
+                            .overlay { shape.inset(by: 1).strokeBorder(.white, lineWidth: 1.5) }
+                            .overlay { shape.strokeBorder(.black, lineWidth: 1) }
+                            .frame(width: 24, height: 24)
+                            .contentShape(shape)
+                    }
+                    .buttonStyle(.plain)
+                    .help("选取晕影颜色")
+                    Spacer()
+                }
+                control("数量", \.vignetteAmount, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                    .help("将所选颜色融入边缘，中心保持不变")
+                control("中点", \.vignetteMidpoint, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                control("圆度", \.vignetteRoundness, range: -100...100, unit: "", decimals: 0, logarithmic: false)
+                control("羽化", \.vignetteFeather, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                control("高光", \.vignetteHighlights, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                    .help("保护靠近边缘的明亮区域")
+            case .bloomGlow:
+                control("数量", \.bloomAmount, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                control("半径", \.bloomRadius, range: 1...150, unit: "px", decimals: 0, logarithmic: true)
+            case .tonalContrast:
+                control("数量", \.tonalAmount, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                control("阴影", \.tonalShadows, range: -100...100, unit: "%", decimals: 0, logarithmic: false)
+                control("中间调", \.tonalMidtones, range: -100...100, unit: "%", decimals: 0, logarithmic: false)
+                control("高光", \.tonalHighlights, range: -100...100, unit: "%", decimals: 0, logarithmic: false)
+                control("半径", \.tonalRadius, range: 1...100, unit: "px", decimals: 0, logarithmic: true)
             case .lensCorrection:
                 control("移去扭曲", \.distortion, range: -100...100, unit: "", decimals: 0, logarithmic: false)
                 Text("正值矫正向外弯曲的线条（桶形）；负值矫正向内弯曲的线条（枕形）。")
@@ -108,7 +156,9 @@ struct FilterSheet: View {
                 Spacer()
                 // While the preview is being worked out (Remove Background's mask, Content-Aware Fill) OK waits, so
                 // the panel says what it is waiting for rather than showing a disabled button and nothing else.
-                if edit?.committing == true || edit?.preparing == true {
+                // Only the slow filters say so: a quick preview (Dither, a blur) toggling this at every slider step would
+                // make the panel flicker as it grows and shrinks.
+                if edit?.committing == true || (edit?.preparing == true && edit?.kind.isAutomatic == true) {
                     ProgressView().controlSize(.small)
                     Text(edit?.committing == true ? "正在应用…" : "处理中…")
                         .font(.callout).foregroundStyle(.secondary)
@@ -118,26 +168,151 @@ struct FilterSheet: View {
                     .disabled(edit?.kind.isAutomatic == true && (edit?.preparing == true || edit?.previewError != nil))
             }
         }
-        .padding(24).frame(width: 380).fixedSize()
+        .onPreferenceChange(LabelWidthKey.self) { labelWidth = max(60, $0) }
+        .padding(24)
+        .frame(width: isCameraRaw ? FloatingPanelController.dockedWidth : 380)
+        .frame(maxHeight: isCameraRaw ? .infinity : nil, alignment: .top)
+        .fixedSize(horizontal: false, vertical: !isCameraRaw)
 
         .disabled(edit?.committing == true)
-        // The app's color picker, open on a Gradient Map end, previews its working color live.
-        .onChange(of: session.colorPicker?.color) { _, _ in session.previewGradientMapColor() }
+        // Filter colors preview live while the app's color picker is open.
+        .onChange(of: session.colorPicker?.color) { _, _ in
+            session.previewGradientMapColor()
+            session.previewVignetteColor()
+            session.previewDitherColor()
+        }
+    }
+
+    @ViewBuilder private var ditherControls: some View {
+        let dither = settings.dither
+        Picker("样式", selection: Binding(get: { dither.style }, set: { new in update { $0.dither.style = new } })) {
+            ForEach(DitherStyle.groups.indices, id: \.self) { group in
+                if group > 0 { Divider() }
+                ForEach(DitherStyle.groups[group], id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
+            }
+        }
+        if dither.style != .ascii {
+        control("像素大小", \.dither.pixelSize, range: DitherSettings.pixelSizeRange, unit: "px", decimals: 0, logarithmic: false)
+            .help("抖动后每个像素的边长，数值越大越有复古屏幕的色块感")
+        }
+        if dither.style == .ascii {
+            control("文字大小", \.dither.textSize, range: DitherSettings.textSizeRange, unit: "px", decimals: 0, logarithmic: false)
+                .help("每一行字符的高度")
+        }
+        if dither.style.isHalftone {
+            control("单元格大小", \.dither.cellSize, range: DitherSettings.cellSizeRange, unit: "px", decimals: 0, logarithmic: false)
+        }
+        if dither.style.isHalftone {
+            control("角度", \.dither.angle, range: -90...90, unit: "°", decimals: 0, logarithmic: false)
+        }
+        if dither.style == .ascii {
+            HStack(spacing: 10) {
+                Text("字符")
+                TextField("字符", text: Binding(get: { dither.characters }, set: { new in update { $0.dither.characters = new } }))
+                    .textFieldStyle(.roundedBorder).font(.body.monospaced())
+            }
+            .help("用于绘制的字符，顺序任意：每个位置会选用墨色最接近其色调的字符")
+        }
+        if dither.style.hasTones {
+            control("色调", \.dither.levels, range: DitherSettings.levelsRange, unit: "", decimals: 0, logarithmic: false)
+                .help("每通道色调数：2 为纯黑白")
+        }
+        if dither.style.diffuses {
+            control("扩散", \.dither.diffusion, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                .help("每个像素的误差向邻域扩散的程度。越小色块越平坦")
+        }
+        control("密度", \.dither.density, range: -100...100, unit: "", decimals: 0, logarithmic: false)
+            .help("抖动前使用更多（更暗）或更少的墨量")
+        control("对比度", \.dither.contrast, range: -100...100, unit: "", decimals: 0, logarithmic: false)
+        // A menu, like Style: the three choices as segments are wider than the panel, which then flips between
+        // squeezing the row and wrapping it, resizing itself at every slider step.
+        Picker("颜色数", selection: Binding(get: { dither.colors }, set: { new in update { $0.dither.colors = new } })) {
+            ForEach(DitherColors.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
+        }
+        .fixedSize()
+        if dither.colors == .twoColors {
+            HStack(spacing: 8) {
+                Text("暗色")
+                swatch(dither.dark, help: "Choose the dark color") { session.openDitherColorPicker(light: false) }
+                Text("亮色").padding(.leading, 10)
+                swatch(dither.light, help: "Choose the light color") { session.openDitherColorPicker(light: true) }
+                Spacer()
+            }
+        }
+        if dither.pixelSize > 1, dither.style != .ascii {
+            Picker("像素形状", selection: Binding(get: { dither.pixelShape }, set: { new in update { $0.dither.pixelShape = new } })) {
+                ForEach(DitherPixelShape.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
+            }
+            .fixedSize()
+            .help("将每个色块绘为实心方块，或像点阵屏一样的圆点")
+        }
+        if dither.style.drawsMarks {
+            Toggle("暗底亮色", isOn: flag(\.dither.lightOnDark))
+                .help("在暗色上绘制亮色标记，如同发光屏幕")
+        }
+    }
+
+    private func swatch(_ color: AdjustmentColor, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+            shape.fill(Color(.sRGB, red: color.red, green: color.green, blue: color.blue))
+                .overlay { shape.inset(by: 1).strokeBorder(.white, lineWidth: 1.5) }
+                .overlay { shape.strokeBorder(.black, lineWidth: 1) }
+                .frame(width: 24, height: 24)
+                .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 
     private func flag(_ key: WritableKeyPath<FilterSettings, Bool>) -> Binding<Bool> {
         Binding(get: { settings[keyPath: key] }, set: { value in update { $0[keyPath: key] = value } })
     }
 
+    /// The setting put back to its filter's default, as a double-click on a colored slider does.
+    static func resetting(_ key: WritableKeyPath<FilterSettings, Double>, in settings: FilterSettings) -> FilterSettings {
+        var value = settings
+        value[keyPath: key] = FilterSettings()[keyPath: key]
+        return value
+    }
+
+    static let cyanRedTrack = CameraRawSliderTrack.opposing(NSColor(srgbRed: 0.10, green: 0.72, blue: 0.80, alpha: 1),
+                                                            NSColor(srgbRed: 0.86, green: 0.18, blue: 0.20, alpha: 1))
+    static let magentaGreenTrack = CameraRawSliderTrack.opposing(NSColor(srgbRed: 0.80, green: 0.22, blue: 0.70, alpha: 1),
+                                                                 NSColor(srgbRed: 0.24, green: 0.70, blue: 0.30, alpha: 1))
+    static let yellowBlueTrack = CameraRawSliderTrack.opposing(NSColor(srgbRed: 0.95, green: 0.82, blue: 0.18, alpha: 1),
+                                                               NSColor(srgbRed: 0.22, green: 0.40, blue: 0.92, alpha: 1))
+
     /// A slider plus an exact field. Logarithmic sliders give the small values used most most of the travel.
+    /// A colored track draws the slider as Camera Raw's, where a double-click on the title or knob resets it.
     private func control(_ title: String, _ key: WritableKeyPath<FilterSettings, Double>, range: ClosedRange<Double>,
-                         unit: String, decimals: Int, logarithmic: Bool) -> some View {
+                         unit: String, decimals: Int, logarithmic: Bool, track: CameraRawSliderTrack? = nil) -> some View {
         let step = pow(10, Double(decimals))
+        let reset = { update { $0 = Self.resetting(key, in: $0) } }
         return HStack(spacing: 10) {
-            Text(title).frame(minWidth: 60, alignment: .leading).fixedSize()
-            Slider(value: Binding(get: { logarithmic ? log(settings[keyPath: key]) : settings[keyPath: key] },
-                                  set: { value in update { $0[keyPath: key] = ((logarithmic ? exp(value) : value) * step).rounded() / step } }),
-                   in: logarithmic ? log(range.lowerBound)...log(range.upperBound) : range)
+            Text(title).fixedSize()
+                .background(GeometryReader { Color.clear.preference(key: LabelWidthKey.self, value: $0.size.width) })
+                .frame(width: labelWidth, alignment: .leading)
+                .onTapGesture(count: 2) { if track != nil { reset() } }
+                .scrubbable(sensitivity: 1 / step,
+                            value: Binding(get: { settings[keyPath: key] }, set: { value in update { $0[keyPath: key] = value } }),
+                            range: range)
+            if let track {
+                CameraRawSlider(value: settings[keyPath: key], range: range, track: track,
+                                help: "\(title). Double-click to reset.",
+                                onChange: { value in update { $0[keyPath: key] = (value * step).rounded() / step } },
+                                onReset: reset)
+            } else {
+                Slider(value: Binding(get: { logarithmic ? log(settings[keyPath: key]) : settings[keyPath: key] },
+                                      set: { value in update { $0[keyPath: key] = ((logarithmic ? exp(value) : value) * step).rounded() / step } }),
+                       in: logarithmic ? log(range.lowerBound)...log(range.upperBound) : range)
+            }
             TextField(title, value: Binding(get: { settings[keyPath: key] }, set: { value in update { $0[keyPath: key] = value } }),
                       format: .number.precision(.fractionLength(0...decimals)))
                 .frame(width: 56).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing)
@@ -189,4 +364,9 @@ struct GradientMapControls: View {
             Text(title)
         }
     }
+}
+
+private struct LabelWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

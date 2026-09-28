@@ -10,13 +10,15 @@ struct ShapeControls: View {
                 session.cancelShape()
                 session.shapeKind = kind
             })) {
-                ForEach(ShapeKind.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                ForEach(ShapeKind.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
             }
             .pickerStyle(.segmented).labelsHidden().fixedSize()
             .help("Shift-U（或 Tab）在矩形、椭圆、直线之间切换")
             if session.shapeKind == .line {
                 HStack(spacing: 6) {
-                    Text("线宽")
+                    Text("线宽").scrubbable(sensitivity: 1, value: $session.shapeLineWidth, range: 1...5000)
                     Slider(value: Binding(get: { min(100, session.shapeLineWidth) },
                                           set: { session.shapeLineWidth = $0.rounded() }), in: 1...100)
                         .frame(width: 100)
@@ -31,7 +33,7 @@ struct ShapeControls: View {
             }
             if session.shapeKind == .rectangle {
                 HStack(spacing: 6) {
-                    Text("圆角")
+                    Text("圆角").scrubbable(sensitivity: 1, value: $session.shapeCornerRadius, range: 0...5000)
                     Slider(value: Binding(get: { min(200, session.shapeCornerRadius) },
                                           set: { session.shapeCornerRadius = $0.rounded() }), in: 0...200)
                         .frame(width: 100)

@@ -5,13 +5,20 @@ import UniformTypeIdentifiers
 
 extension UTType {
     static let compositorProject = UTType(exportedAs: "com.compositor.project", conformingTo: .package)
-    static let photoshopImage = UTType(importedAs: "com.adobe.photoshop-image")
-    static let importableImages: [UTType] = [.jpeg, .png, .heic, .tiff, .photoshopImage, .rawImage]
+    nonisolated static let photoshopImage = UTType(importedAs: "com.adobe.photoshop-image")
+    nonisolated static let photoshopLargeImage = UTType(importedAs: "com.adobe.photoshop-large-image")
+    static let importableImages: [UTType] = [.jpeg, .png, .heic, .tiff, .photoshopImage, .photoshopLargeImage, .rawImage, .svg]
 }
 
 nonisolated struct ProjectManifest: Codable, Sendable {
+    /// The format version new saves write.
+    static let current = 11
+    /// Every version `load` accepts. The package-header check, the manifest check and the error
+    /// message all read this, so they cannot drift apart when `current` is bumped.
+    static let supported = 1...ProjectManifest.current
+
     var format = "com.compositor.project"
-    var version = 8
+    var version = ProjectManifest.current
     var colorSpace = "sRGB"
     var resolution: Double? = nil // Older version-1 projects default to 72 pixels/inch.
     let documentID: UUID
@@ -59,9 +66,9 @@ nonisolated enum ProjectError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalid: "这不是有效的 Compositor 项目，或其元数据已损坏。"
-        case .version(let version): "This project uses format version \(version). This app supports versions 1–8."
+        case .version(let version): "This project uses format version \(version). This app supports versions \(ProjectManifest.supported.lowerBound)–\(ProjectManifest.supported.upperBound)."
         case .missingImage: "项目中的某个图像缺失或已损坏。当前文档未被替换。"
-        case .tooLarge: "该项目超出支持的画布、图层、文件大小或 1 亿像素图像限制。"
+        case .tooLarge: "This project exceeds the supported canvas, layer, file-size, or \(DocumentLimits.documentBudgetMegapixels)-megapixel document limit."
         case .encode: "某个图像无法保存。先前的项目未被替换。"
         }
     }
@@ -74,7 +81,7 @@ actor ProjectStore {
         let version: Int
     }
 
-    func save(_ snapshot: ProjectSnapshot, to url: URL) throws {
+    func save(_ snapshot: ProjectSnapshot, to url: URL, quickLook: QuickLookImages? = nil) throws {
         try validate(snapshot.manifest)
         var images: [String: FileWrapper] = [:]
         var pixels = 0, maskPixels = 0
@@ -102,10 +109,17 @@ actor ProjectStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let metadata = try encoder.encode(snapshot.manifest)
         guard metadata.count <= 4 * 1024 * 1024 else { throw ProjectError.tooLarge }
-        let package = FileWrapper(directoryWithFileWrappers: [
+        var contents = [
             "manifest.json": FileWrapper(regularFileWithContents: metadata),
             "images": FileWrapper(directoryWithFileWrappers: images)
-        ])
+        ]
+        // Quick Look's Space-bar preview reads this by name; loading ignores it.
+        if let quickLook {
+            contents["QuickLook"] = FileWrapper(directoryWithFileWrappers: [
+                "Preview.jpg": FileWrapper(regularFileWithContents: quickLook.preview),
+            ])
+        }
+        let package = FileWrapper(directoryWithFileWrappers: contents)
         var coordinationError: NSError?
         var writeError: Error?
         NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinationError) { destination in
@@ -139,7 +153,7 @@ actor ProjectStore {
         do { header = try JSONDecoder().decode(Header.self, from: metadata) }
         catch { throw ProjectError.invalid }
         guard header.format == "com.compositor.project" else { throw ProjectError.invalid }
-        guard (1...8).contains(header.version) else { throw ProjectError.version(header.version) }
+        guard ProjectManifest.supported.contains(header.version) else { throw ProjectError.version(header.version) }
         do { manifest = try JSONDecoder().decode(ProjectManifest.self, from: metadata) }
         catch { throw ProjectError.invalid }
         try validate(manifest)
@@ -152,7 +166,11 @@ actor ProjectStore {
             let file = url.appendingPathComponent("images").appendingPathComponent(filename)
             try checkFile(file, inside: url, maximumBytes: 512 * 1024 * 1024)
             let asset = try autoreleasepool {
-                guard let source = CGImageSourceCreateWithURL(file as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+                // Decoded from the file's bytes in memory, not from the file: an image made from a file source stays tied
+                // to it, and the next save replaces that file (ImageIO: "mmapped file changed"), so an image kept for undo
+                // could later read someone else's pixels.
+                let bytes = try Data(contentsOf: file)
+                guard let source = CGImageSourceCreateWithData(bytes as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
                       CGImageSourceGetType(source) as String? == UTType.png.identifier,
                       CGImageSourceGetCount(source) == 1,
                       let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
@@ -179,19 +197,26 @@ actor ProjectStore {
 
     private func validate(_ manifest: ProjectManifest) throws {
         guard manifest.format == "com.compositor.project" else { throw ProjectError.invalid }
-        guard (1...8).contains(manifest.version) else { throw ProjectError.version(manifest.version) }
+        guard ProjectManifest.supported.contains(manifest.version) else { throw ProjectError.version(manifest.version) }
         guard manifest.colorSpace == "sRGB" else { throw ProjectError.invalid }
         if let resolution = manifest.resolution {
             guard resolution.isFinite, (1...9600).contains(resolution) else { throw ProjectError.invalid }
         }
-        guard (1...30_000).contains(manifest.width), (1...30_000).contains(manifest.height),
+        guard (1...DocumentLimits.maxSide).contains(manifest.width), (1...DocumentLimits.maxSide).contains(manifest.height),
               manifest.layers.count <= 10_000 else { throw ProjectError.tooLarge }
         for layer in manifest.layers {
             if let text = layer.text {
-                guard text.isValid, layer.imageFile != nil, layer.isGroup != true, layer.adjustment == nil else { throw ProjectError.invalid }
+                // Per-letter colors arrived in version 10, per-letter faces in version 11.
+                guard text.isValid,
+                      text.colorRuns == nil || manifest.version >= 10,
+                      text.fontRuns == nil || manifest.version >= 11,
+                      layer.imageFile != nil, layer.isGroup != true, layer.adjustment == nil else { throw ProjectError.invalid }
             }
             if let adjustment = layer.adjustment {
                 guard manifest.version >= 7, layer.isGroup != true, layer.imageFile == nil, adjustment.isValid else { throw ProjectError.invalid }
+                if adjustment.kind == .gaussianBlur || adjustment.kind == .motionBlur || adjustment.kind == .addNoise {
+                    guard manifest.version >= 9 else { throw ProjectError.invalid }
+                }
             }
             // Layer masks arrived in version 4, folder masks in version 6.
             guard layer.maskFile == nil || (manifest.version >= (layer.isGroup == true ? 6 : 4)
@@ -237,7 +262,7 @@ actor ProjectStore {
     }
 
     private func checkSize(width: Int, height: Int, used: inout Int) throws {
-        guard (1...30_000).contains(width), (1...30_000).contains(height), width * height <= 100_000_000 - used else {
+        guard (1...DocumentLimits.maxSide).contains(width), (1...DocumentLimits.maxSide).contains(height), width * height <= DocumentLimits.documentPixelBudget - used else {
             throw ProjectError.tooLarge
         }
         used += width * height

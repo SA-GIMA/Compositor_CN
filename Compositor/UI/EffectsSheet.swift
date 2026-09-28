@@ -13,6 +13,7 @@ struct EffectsSheet: View {
             case .colorOverlay: colorOverlay
             case .innerShadow: innerShadow
             case .outerGlow: outerGlow
+            case .innerGlow: innerGlow
             }
             HStack(spacing: 10) {
                 Spacer()
@@ -133,6 +134,23 @@ struct EffectsSheet: View {
         }
     }
 
+    @ViewBuilder private var innerGlow: some View {
+        let effect = session.editingEffects.innerGlow
+        HStack {
+            Text("内发光").font(.headline)
+            Spacer()
+            if effect != nil { swatch(.innerGlow) }
+        }
+        if let effect {
+            slider("大小", value: Binding(get: { effect.size }, set: { size in
+                session.changeEffects { $0.innerGlow?.size = size }
+            }), range: 0...100, inputRange: 0...500, unit: "px")
+            slider("不透明度", value: Binding(get: { CGFloat(effect.opacity * 100) }, set: { value in
+                session.changeEffects { $0.innerGlow?.opacity = Double(value) / 100 }
+            }), range: 0...100, unit: "%")
+        }
+    }
+
     /// The effect's color, opened in the app's own picker.
     private func swatch(_ kind: LayerEffectKind) -> some View {
         let color = session.editingEffects.color(kind)
@@ -158,6 +176,7 @@ struct EffectsSheet: View {
         }
         return HStack(spacing: 10) {
             Text(title).frame(width: 64, alignment: .leading)
+                .scrubbable(sensitivity: 1, value: value, range: limits)
             // A manually entered larger value stays intact; only the thumb is pinned
             // to the end of the slider until the user drags it again.
             Slider(value: Binding(get: { min(range.upperBound, max(range.lowerBound, value.wrappedValue)) },

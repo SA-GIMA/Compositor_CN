@@ -27,13 +27,13 @@ struct CompositorApp: App {
                     if session.textDraft != nil || session.levels != nil || session.isProjectBusy || session.showsNewDocument || session.showsImporter || session.renamingLayerID != nil || session.transformEdit?.persistent == true {
                         Button("撤销") {
                             if NSApp.keyWindow?.firstResponder is NSTextView {
-                                NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
+                                NSApp.sendAction(NSSelectorFromString("undo:"), to: nil, from: nil)
                             }
                         }
                             .configuredKeyboardShortcut("z")
                         Button("重做") {
                             if NSApp.keyWindow?.firstResponder is NSTextView {
-                                NSApp.sendAction(Selector(("redo:")), to: nil, from: nil)
+                                NSApp.sendAction(NSSelectorFromString("redo:"), to: nil, from: nil)
                             }
                         }
                             .configuredKeyboardShortcut("z", modifiers: [.command, .shift])
@@ -55,6 +55,18 @@ struct CompositorApp: App {
                         Task { await applicationDelegate.projects.open() }
                     }
                         .configuredKeyboardShortcut("o").disabled(!applicationDelegate.projects.canStart)
+                    Menu("最近打开") {
+                        ForEach(RecentProjects.shared.urls, id: \.self) { url in
+                            Button(url.deletingPathExtension().lastPathComponent) {
+                                applicationDelegate.showEditor?()
+                                Task { await applicationDelegate.projects.open(url) }
+                            }
+                        }
+                        Divider()
+                        Button("清空菜单") { RecentProjects.shared.clear() }
+                            .disabled(RecentProjects.shared.urls.isEmpty)
+                    }
+                        .disabled(!applicationDelegate.projects.canStart)
                     Button("导入图像…") { session.showsImporter = true }
                         .disabled(session.levels != nil || session.showsBusy || session.isImporting || session.showsNewDocument)
                 }
@@ -84,11 +96,22 @@ struct CompositorApp: App {
                         Button("检查更新…") { applicationDelegate.updater.checkForUpdates(nil) }
                     }
                     CommandGroup(after: .toolbar) {
-                        Button("适合画布") { session.fit() }.configuredKeyboardShortcut("0").disabled(session.document == nil)
-                        Button("实际像素") { session.zoom(to: 1) }.configuredKeyboardShortcut("1").disabled(session.document == nil)
-                        Button("放大") { session.zoom(to: session.viewport.zoom * 1.25) }
+                        // With a dialog's preview open (Export JPEG), these zoom that preview rather than the canvas.
+                        Button("适合画布") {
+                            if let preview = session.previewZoom { preview(.fit) } else { session.fit() }
+                        }.configuredKeyboardShortcut("0").disabled(session.document == nil)
+                        Button("实际像素") {
+                            if let preview = session.previewZoom { preview(.actual) } else { session.zoom(to: 1) }
+                        }.configuredKeyboardShortcut("1").disabled(session.document == nil)
+                        Button("放大") {
+                            guard !(NSApp.keyWindow?.firstResponder is NSText) else { return }
+                            if let preview = session.previewZoom { preview(.zoomIn) } else { session.zoomKeyboard(by: 1) }
+                        }
                             .configuredKeyboardShortcut("=").disabled(session.document == nil)
-                        Button("缩小") { session.zoom(to: session.viewport.zoom / 1.25) }
+                        Button("缩小") {
+                            guard !(NSApp.keyWindow?.firstResponder is NSText) else { return }
+                            if let preview = session.previewZoom { preview(.zoomOut) } else { session.zoomKeyboard(by: -1) }
+                        }
                             .configuredKeyboardShortcut("-").disabled(session.document == nil)
                         Toggle("像素网格（800% 及以上）", isOn: Binding(get: { session.showsPixelGrid },
                                                                               set: { session.showsPixelGrid = $0 }))
@@ -105,6 +128,8 @@ struct CompositorApp: App {
                                 Toggle("参考线", isOn: Binding(get: { session.showsGuides }, set: { session.showsGuides = $0 }))
                                     .configuredKeyboardShortcut(";").disabled(session.document == nil)
                             }
+                            Button("网格设置…") { Task { await applicationDelegate.projects.gridSettings() } }
+                                .disabled(session.document == nil)
                             Toggle("标尺", isOn: Binding(get: { session.showsRulers }, set: { session.showsRulers = $0 }))
                                 .configuredKeyboardShortcut("r").disabled(session.document == nil)
                             Divider()
@@ -150,7 +175,7 @@ struct CompositorApp: App {
                         .configuredKeyboardShortcut("x")
                     Button("拷贝") {
                         if NSApp.keyWindow?.firstResponder is NSTextView { NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil) }
-                        else if session.canCopyPixels { session.copySelection() }
+                        else if session.canCopyPixels || session.canCopyLayer { session.copySelection() }
                         else { NSSound.beep() }
                     }
                         .configuredKeyboardShortcut("c")
@@ -158,6 +183,7 @@ struct CompositorApp: App {
                         .configuredKeyboardShortcut("c", modifiers: [.command, .shift]).disabled(!session.canCopyMerged)
                     Button("粘贴") {
                         if NSApp.keyWindow?.firstResponder is NSTextView { NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil) }
+                        else if applicationDelegate.workspace.pasteCopiedLayer() { }
                         else if session.canPaste { session.paste() }
                         else { NSSound.beep() }
                     }
@@ -209,6 +235,8 @@ struct CompositorApp: App {
                     Button("主体") { Task { await session.selectSubject() } }
                         .configuredKeyboardShortcut("a", modifiers: [.command, .option])
                         .disabled(!session.canSelectSubject)
+                    Button("色彩范围…") { session.beginColorRange() }
+                        .disabled(!session.canSelectColorRange)
                     Button("蒙版黑色区域") {
                         if let id = session.activeLayerID { session.loadMaskSelection(layerID: id) }
                     }
@@ -242,6 +270,8 @@ struct CompositorApp: App {
                     Button("图像大小…") { Task { await applicationDelegate.projects.imageSize() } }
                         .configuredKeyboardShortcut("i", modifiers: [.command, .option])
                         .disabled(session.document == nil || !applicationDelegate.projects.canStart)
+                    Button("裁切…") { Task { await applicationDelegate.projects.trim() } }
+                        .disabled(session.document == nil || !applicationDelegate.projects.canStart)
                     Group {
                         Divider()
                         Button("水平翻转画布") { session.flipCanvas(horizontally: true) }
@@ -253,7 +283,7 @@ struct CompositorApp: App {
                 CommandMenu("滤镜") {
                     ForEach(FilterKind.allCases.filter { $0 != .contentAwareFill && !$0.isImageAdjustment }, id: \.self) { kind in
                         Button("\(kind.displayName)…") { session.beginFilter(kind) }
-                            .disabled(!session.canAdjustColors || session.hueSaturation != nil)
+                            .disabled(!(kind == .vignette ? session.canVignette : session.canAdjustColors) || session.hueSaturation != nil)
                     }
                 }
                 CommandMenu("图层") {
@@ -269,7 +299,7 @@ struct CompositorApp: App {
                     Button(session.canTransformSelection ? "变换选区" : "变换图层") { session.transformCommand() }
                         .configuredKeyboardShortcut("t").disabled(!session.canTransform && !session.canTransformSelection)
                     Button(session.selection == nil ? "复制图层" : "通过拷贝新建图层") { session.layerViaCopy() }
-                        .configuredKeyboardShortcut("j").disabled(!session.canCopyPixels && !(session.selection == nil && session.canEditLayers && session.activeLayer?.isGroup == false))
+                        .configuredKeyboardShortcut("j").disabled(!session.canCopyPixels && !(session.selection == nil && session.canEditLayers && session.activeLayer != nil))
                     Divider()
                     Button(session.activeLayer?.maskSourceID == nil ? "创建剪贴蒙版" : "释放剪贴蒙版") {
                         if let id = session.activeLayerID { session.toggleClippingMask(id) }

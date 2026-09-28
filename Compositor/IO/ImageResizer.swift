@@ -12,7 +12,7 @@ actor ImageResizer {
     static let shared = ImageResizer()
 
     func resize(_ snapshot: ProjectSnapshot, to options: ImageSizeOptions) throws -> ProjectSnapshot {
-        guard (1...30_000).contains(options.width), (1...30_000).contains(options.height),
+        guard (1...DocumentLimits.maxSide).contains(options.width), (1...DocumentLimits.maxSide).contains(options.height),
               options.resolution.isFinite, (1...9600).contains(options.resolution) else { throw ProjectError.tooLarge }
         let old = snapshot.manifest
         var manifest = ProjectManifest(resolution: options.resolution, documentID: old.documentID,
@@ -22,7 +22,7 @@ actor ImageResizer {
             manifest.layers = old.layers
             return ProjectSnapshot(manifest: manifest, images: snapshot.images, masks: snapshot.masks)
         }
-        guard options.width * options.height <= 100_000_000 else { throw ProjectError.tooLarge }
+        guard options.width * options.height <= DocumentLimits.maxSurfacePixels else { throw ProjectError.tooLarge }
         let sx = CGFloat(options.width) / CGFloat(old.width)
         let sy = CGFloat(options.height) / CGFloat(old.height)
         manifest.guides = old.guides?.map { $0.scaled(x: sx, y: sy) }
@@ -42,8 +42,8 @@ actor ImageResizer {
                 size: CGSize(width: width, height: height), sampling: options.sampling)
             guard transform.isValid else { throw ProjectError.tooLarge }
             if layer.imageFile != nil {
-                guard (1...30_000).contains(width), (1...30_000).contains(height),
-                      width * height <= 100_000_000 - usedPixels else { throw ProjectError.tooLarge }
+                guard (1...DocumentLimits.maxSide).contains(width), (1...DocumentLimits.maxSide).contains(height),
+                      width * height <= DocumentLimits.documentPixelBudget - usedPixels else { throw ProjectError.tooLarge }
                 usedPixels += width * height
                 guard let source = snapshot.images[layer.id] else { throw ProjectError.missingImage }
                 let asset = try autoreleasepool {
@@ -76,8 +76,8 @@ actor ImageResizer {
                 // A mask on its own placement keeps its pixels; the placement scales with the canvas.
                 if (source.image.width == 1 && source.image.height == 1) || layer.maskPlacement != nil { masks[layer.id] = source }
                 else {
-                    guard (1...30_000).contains(width), (1...30_000).contains(height),
-                          width * height <= 100_000_000 - usedMaskPixels else { throw ProjectError.tooLarge }
+                    guard (1...DocumentLimits.maxSide).contains(width), (1...DocumentLimits.maxSide).contains(height),
+                          width * height <= DocumentLimits.documentPixelBudget - usedMaskPixels else { throw ProjectError.tooLarge }
                     usedMaskPixels += width * height
                     guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
                         bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else { throw ExportError.render }

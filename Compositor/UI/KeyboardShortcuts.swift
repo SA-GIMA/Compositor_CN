@@ -115,7 +115,7 @@ struct ShortcutDefinition: Identifiable {
             result += [entry("Nudge \(direction) 1 px", key), entry("Nudge \(direction) 10 px", key, 8),
                        entry("Move selected pixels \(direction) 1 px", key, 1), entry("Move selected pixels \(direction) 10 px", key, 9)]
         }
-        result.append(.init(title: "Finish editing text", group: "Text Editing", original: ShortcutChord("\r", 1)))
+        result.append(.init(title: "完成文字编辑", group: "Text Editing", original: ShortcutChord("\r", 1)))
         for (title, key) in [("Decrease tracking", "\u{f702}"), ("Increase tracking", "\u{f703}"),
                              ("Decrease leading", "\u{f700}"), ("Increase leading", "\u{f701}")] {
             result.append(.init(title: title, group: "Text Editing", original: ShortcutChord(key, 2)))

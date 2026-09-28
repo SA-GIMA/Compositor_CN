@@ -185,7 +185,7 @@ nonisolated struct GrainSettings: Codable, Equatable, Sendable {
     var amount: Double = 25
     /// Grain scale in document pixels, 0.5–20.
     var size: Double = 1.5
-    /// 0–100: how much per-pixel noise roughens the smooth grain.
+    /// 0–100: how much smaller, irregular detail roughens the main grain particles.
     var roughness: Double = 50
     var seed: UInt32 = 0
     var isValid: Bool { Self.amountRange.contains(amount) && Self.sizeRange.contains(size) && Self.roughnessRange.contains(roughness) }

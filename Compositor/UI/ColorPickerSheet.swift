@@ -34,8 +34,11 @@ struct ColorPickerSheet: View {
                 }
                 Spacer(minLength: 12)
                 fields
-                Text("点击画布取样")
-                    .font(.caption).foregroundStyle(.secondary).padding(.top, 8)
+                // A dialog covers the canvas, so there's nothing to sample.
+                if case .dialog = state.target {} else {
+                    Text("点击画布取样")
+                        .font(.caption).foregroundStyle(.secondary).padding(.top, 8)
+                }
             }
             .frame(width: 180, height: fieldSize, alignment: .topLeading)
         }
@@ -119,15 +122,17 @@ struct ColorPickerSheet: View {
     }
 
     private func channelRow(_ label: String, _ channel: WritableKeyPath<PaletteColor, CGFloat>) -> some View {
-        GridRow {
+        let channelValue = Binding<Int>(
+            get: { Int((color[keyPath: channel] * 255).rounded()) },
+            set: { newValue in
+                var rgb = color
+                rgb[keyPath: channel] = CGFloat(min(255, max(0, newValue))) / 255
+                hsb.setRGB(rgb)
+            })
+        return GridRow {
             Text(label).frame(width: 14, alignment: .leading)
-            TextField(label, value: Binding(
-                get: { Int((color[keyPath: channel] * 255).rounded()) },
-                set: { newValue in
-                    var rgb = color
-                    rgb[keyPath: channel] = CGFloat(min(255, max(0, newValue))) / 255
-                    hsb.setRGB(rgb)
-                }), format: .number)
+                .scrubbable(sensitivity: 1, value: channelValue, range: 0...255)
+            TextField(label, value: channelValue, format: .number)
                 .frame(width: 52)
                 .arrowSteps(value: { Double(Int((color[keyPath: channel] * 255).rounded())) },
                             change: { newValue in
@@ -183,3 +188,31 @@ final class ColorPickerPanelController: NSObject {
     /// Returns keyboard focus to the picker after a click on the canvas sampled a color.
     static func refocus() { FloatingPanelController.refocus(identifier) }
 }
+
+/// A dialog's color swatch, drawn as the brush's: clicking it opens the app's picker on `color`, which follows the
+/// working color as it moves and keeps the one chosen. `closePicker()` puts the picker away with the dialog.
+struct DialogColorSwatch: View {
+    let title: String
+    @Binding var color: PaletteColor
+    let session: EditorSession
+    var body: some View {
+        Button {
+            session.openDialogColorPicker(title: title, color: color) { color = $0 }
+        } label: {
+            let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+            shape.fill(color.swiftUI)
+                .overlay { shape.inset(by: 1).strokeBorder(.white, lineWidth: 1) }
+                .overlay { shape.strokeBorder(.black, lineWidth: 1) }
+                .frame(width: 34, height: 18)
+                .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .onChange(of: session.colorPicker?.color) { _, _ in session.previewDialogColor() }
+        .onDisappear { Self.closePicker(session) }
+    }
+    static func closePicker(_ session: EditorSession) {
+        if session.pickingForDialog { session.closeColorPicker(commit: true) }
+    }
+}
+

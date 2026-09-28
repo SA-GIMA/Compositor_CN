@@ -10,7 +10,7 @@ struct BlendModePicker: NSViewRepresentable {
         // with a line between, so a long list stays readable.
         for (index, group) in LayerBlendMode.groups.enumerated() {
             if index > 0 { button.menu?.addItem(.separator()) }
-            for mode in group { button.addItem(withTitle: mode.rawValue) }
+            for mode in group { button.addItem(withTitle: mode.displayName) }
         }
         button.menu?.delegate = context.coordinator
         button.target = context.coordinator
@@ -45,7 +45,7 @@ struct BlendModePicker: NSViewRepresentable {
             // AppKit briefly reports no highlighted item while dismissing the menu.
             // Keep the last preview alive until the selection action has committed so
             // the canvas never flashes back to the layer's previous mode.
-            guard let mode = item.flatMap({ LayerBlendMode(rawValue: $0.title) }) else { return }
+            guard let title = item?.title, let mode = LayerBlendMode.allCases.first(where: { $0.displayName == title }) else { return }
             highlightedMode = mode
             session.previewBlendMode(mode, for: layerID)
         }

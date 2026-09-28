@@ -18,7 +18,9 @@
 				<string>public.heic</string>
 				<string>public.tiff</string>
 				<string>com.adobe.photoshop-image</string>
+				<string>com.adobe.photoshop-large-image</string>
 				<string>public.camera-raw-image</string>
+				<string>public.svg-image</string>
 			</array>
 		</dict>
 		<dict>
@@ -42,6 +44,8 @@
 	<string>https://raw.githubusercontent.com/robbietilton/Compositor/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>KZvD724t8QpzTR4OGrHrsCWt538TJ/g/qrTZii+o214=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -88,6 +92,23 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>psd</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.image</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Adobe Photoshop Large Document</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.adobe.photoshop-large-image</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>psb</string>
 				</array>
 			</dict>
 		</dict>

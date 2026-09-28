@@ -189,7 +189,7 @@ import Testing
             session.updateFilter(settings, preview: true)
             #expect(session.activeLayer?.adjustment?.curves == settings.curves)
             await session.commitFilter()
-        case .exposure, .gradientMap, .grain, .blackWhite, .colorBalance:
+        case .exposure, .gradientMap, .grain, .blackWhite, .colorBalance, .gaussianBlur, .motionBlur, .addNoise:
             #expect(session.filterEdit?.kind == kind.filterKind)
             var settings = try #require(session.filterEdit).settings
             switch kind {
@@ -197,11 +197,19 @@ import Testing
             case .colorBalance: settings.colorBalance.midCyanRed = 50
             case .exposure: settings.exposure.exposure = 1
             case .gradientMap: settings.gradientMap.reversed = true
+            case .gaussianBlur: settings.radius = 24
+            case .motionBlur: settings.angle = 35; settings.distance = 48
+            case .addNoise: settings.amount = 35; settings.gaussian = true; settings.monochromatic = true
             default: settings.grain.amount = 70
             }
             session.updateFilter(settings, preview: true)
             let live = try #require(session.activeLayer?.adjustment)
             #expect(live.exposure == settings.exposure && live.gradientMap == settings.gradientMap && live.grain == settings.grain)
+            if kind == .gaussianBlur { #expect(live.gaussianRadius == 24) }
+            if kind == .motionBlur { #expect(live.resolvedMotionAngle == 35 && live.resolvedMotionDistance == 48) }
+            if kind == .addNoise {
+                #expect(live.resolvedNoiseAmount == 35 && live.resolvedNoiseGaussian && live.resolvedNoiseMonochromatic)
+            }
             await session.commitFilter()
         case .hsv:
             var settings = try #require(session.hueSaturation).settings
@@ -227,11 +235,15 @@ import Testing
             #expect(session.levels?.settings == saved.levels)
             session.updateLevels(LevelsSettings(), preview: true)
             session.cancelLevels()
-        case .curves, .exposure, .gradientMap, .grain, .blackWhite, .colorBalance:
+        case .curves, .exposure, .gradientMap, .grain, .blackWhite, .colorBalance, .gaussianBlur, .motionBlur, .addNoise:
             let reopened = try #require(session.filterEdit).settings
             #expect(reopened.curves == saved.curves && reopened.exposure == saved.exposure
                     && reopened.gradientMap == saved.gradientMap && reopened.grain == saved.grain
                     && reopened.blackWhite == saved.blackWhite && reopened.colorBalance == saved.colorBalance)
+            #expect(reopened.radius == saved.gaussianRadius && reopened.angle == saved.resolvedMotionAngle
+                    && reopened.distance == saved.resolvedMotionDistance)
+            #expect(reopened.amount == saved.resolvedNoiseAmount && reopened.gaussian == saved.resolvedNoiseGaussian
+                    && reopened.monochromatic == saved.resolvedNoiseMonochromatic)
             session.updateFilter(FilterSettings(), preview: true)
             session.cancelFilter()
         case .hsv:

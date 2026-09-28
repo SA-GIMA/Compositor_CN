@@ -12,6 +12,46 @@ struct CursorTests {
                            windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!
     }
 
+    @Test func emptyCanvasLeavesTheScrubberCursorAloneAndRestoresTrackingForADocument() {
+        let session = EditorSession()
+        let view = CanvasView(session: session)
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled],
+                              backing: .buffered, defer: false)
+        window.contentView = view
+        let pointer = mouse(at: NSPoint(x: 200, y: 150), in: window)
+        defer { NSCursor.arrow.set() }
+
+        func hasCanvasTracking() -> Bool {
+            view.trackingAreas.contains { $0.owner === view && $0.options.contains(.mouseEnteredAndExited) }
+        }
+        func checkEmptyCanvas() {
+            view.synchronizeDisplay()
+            #expect(!hasCanvasTracking())
+            NSCursor.resizeLeftRight.set()
+            view.resetCursorRects()
+            view.mouseMoved(with: pointer)
+            view.cursorUpdate(with: pointer)
+            view.mouseExited(with: pointer)
+            let drag = NSEvent.mouseEvent(with: .leftMouseDragged, location: NSPoint(x: 200, y: 150),
+                                          modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                                          context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+            let release = NSEvent.mouseEvent(with: .leftMouseUp, location: NSPoint(x: -20, y: 150),
+                                             modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                                             context: nil, eventNumber: 0, clickCount: 1, pressure: 0)!
+            view.mouseDragged(with: drag)
+            view.mouseUp(with: release)
+            #expect(NSCursor.current === NSCursor.resizeLeftRight,
+                    "Document-close callbacks must not replace a form control's cursor")
+        }
+
+        checkEmptyCanvas()
+        session.createDocument(width: 400, height: 300)
+        view.synchronizeDisplay()
+        #expect(hasCanvasTracking())
+        session.clearProject()
+        checkEmptyCanvas()
+    }
+
     @Test func leavingTheCanvasRestoresTheArrowWithEveryTool() {
         let session = EditorSession()
         session.createDocument(width: 400, height: 300)

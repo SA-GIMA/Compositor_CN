@@ -2,10 +2,42 @@ import AppKit
 
 /// A native text system on the canvas: selection, marked text/IME, clipboard and local undo
 /// stay with NSTextView. Its logical bounds are layer pixels; the containing view supplies zoom.
+/// Its glyphs are clear: the canvas draws the text as the layer's own pixels underneath, as Photoshop does, so
+/// what is typed looks the same at any zoom as it will once it is committed.
+/// Draws text selections translucent, focused or not.
+private final class SeeThroughSelectionLayout: NSLayoutManager {
+    override func fillBackgroundRectArray(_ rectArray: UnsafePointer<NSRect>, count rectCount: Int,
+                                          forCharacterRange charRange: NSRange, color: NSColor) {
+        color.withAlphaComponent(min(color.alphaComponent, 0.45)).setFill()
+        super.fillBackgroundRectArray(rectArray, count: rectCount, forCharacterRange: charRange, color: color)
+    }
+}
+
 final class CanvasTextView: NSTextView {
     weak var editor: InlineTextEditor?
     private let textUndo = UndoManager()
+    /// Set when the font menu takes the focus, so a collapsed caret does not replace the letters that were selected.
+    var holdsSelection = false
     override var undoManager: UndoManager? { textUndo }
+    // Undo and Redo reach the window, whose history isn't this one, so the text answers them itself: ⌘Z takes back
+    // what was typed since the text box opened, in one step, as in Figma.
+    @objc func undo(_ sender: Any?) { if textUndo.canUndo { textUndo.undo() } }
+    @objc func redo(_ sender: Any?) { if textUndo.canRedo { textUndo.redo() } }
+    override func resignFirstResponder() -> Bool {
+        // The font menu takes the focus and can collapse the highlight. The letters stay selected, so the face
+        // applies to them.
+        let range = selectedRange()
+        let resigned = super.resignFirstResponder()
+        if range.length > 0 {
+            holdsSelection = true
+            editor?.keepSelection(range)
+        }
+        return resigned
+    }
+    override func mouseDown(with event: NSEvent) {
+        holdsSelection = false
+        super.mouseDown(with: event)
+    }
     override func keyDown(with event: NSEvent) {
         guard let event = ShortcutSettings.shared.textEvent(event) else { return }
         if event.keyCode == 53 { editor?.canvas?.session.cancelText(); return }
@@ -27,8 +59,12 @@ final class CanvasTextView: NSTextView {
             _ = editor?.canvas?.session.finishText()
             return
         }
+        holdsSelection = false
         super.keyDown(with: event)
+        // Text views hide the pointer while typing; on the canvas it stays, so you can see where you'll click next.
+        NSCursor.setHiddenUntilMouseMoves(false)
     }
+    override func mouseExited(with event: NSEvent) { NSCursor.setHiddenUntilMouseMoves(false) }
     override func paste(_ sender: Any?) { pasteAsPlainText(sender) }
     // The editor sets the cursor for the whole box — the I-beam over the text, resize arrows over the edges.
     override func resetCursorRects() {}
@@ -39,10 +75,12 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
     let textView = CanvasTextView(frame: .zero)
     fileprivate var draftID: UUID?
     private var shownStyle: LayerTextStyle?
+    /// The style after an edit NSTextView has accepted but not yet made, with its color and font runs moved to fit.
+    private var pendingStyle: LayerTextStyle?
     private var synchronizing = false
     private var logicalSize = CGSize(width: 360, height: 160)
     private var handleSize: CGFloat = 6
-    private var shownTransform: LayerTransform?
+    private(set) var shownTransform: LayerTransform?
     private struct Geometry: Equatable {
         let transform: LayerTransform
         let logicalSize: CGSize
@@ -74,6 +112,10 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
         textView.textContainer?.heightTracksTextView = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
+        // The selection shows through to the text the canvas draws beneath it, also while another window (the color
+        // picker previewing the selected letters) has focus, where AppKit would otherwise paint it solid gray.
+        textView.selectedTextAttributes = [.backgroundColor: NSColor.selectedTextBackgroundColor.withAlphaComponent(0.45)]
+        textView.textContainer?.replaceLayoutManager(SeeThroughSelectionLayout())
         textView.setAccessibilityLabel("画布文本")
         // Both backed by layers from the start. Left to AppKit, the text surface's layer is first placed in the
         // canvas's own layer tree and only moved inside this view a frame later; with a flipped layer, whose
@@ -144,17 +186,27 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
         }
         if shownStyle != style {
             synchronizing = true
-            let selection = textView.selectedRange()
+            let live = textView.selectedRange()
+            let kept = canvas.session.textDraft?.selection ?? live
+            let selection = textView.holdsSelection && kept.length > 0 ? kept : live
             if textView.string != style.content { textView.string = style.content }
-            let attributes = EditorSession.textAttributes(style)
-            textView.typingAttributes = attributes
+            var attributes = EditorSession.textAttributes(style)
+            attributes[.foregroundColor] = NSColor.clear
             if !textView.hasMarkedText() {
                 textView.textStorage?.setAttributes(attributes, range: NSRange(location: 0, length: textView.string.utf16.count))
+                for run in style.fontRuns ?? [] where EditorSession.containsTextRun(run.location, run.length, in: textView.string.utf16.count) {
+                    let font = NSFont(name: run.fontName, size: style.fontSize) ?? NSFont.systemFont(ofSize: style.fontSize)
+                    textView.textStorage?.addAttribute(.font, value: font, range: NSRange(location: run.location, length: run.length))
+                }
                 textView.setSelectedRange(NSRange(location: min(selection.location, textView.string.utf16.count),
                     length: min(selection.length, max(0, textView.string.utf16.count - selection.location))))
             }
-            textView.insertionPointColor = (attributes[.foregroundColor] as? NSColor) ?? .white
+            let caret = selection.length > 0 ? selection.location : max(0, selection.location - 1)
+            let face = style.fontName(at: caret)
+            attributes[.font] = NSFont(name: face, size: style.fontSize) ?? NSFont.systemFont(ofSize: style.fontSize)
+            textView.typingAttributes = attributes
             shownStyle = style
+            updateInsertionPointColor(style)
             synchronizing = false
             needsDisplay = true
         }
@@ -165,13 +217,25 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
                 guard let self, self.canvas?.session.textDraft?.id == draft.id else { return }
                 if self.window?.firstResponder is NSText, self.window?.firstResponder !== self.textView { return }
                 self.window?.makeFirstResponder(self.textView)
+                // Opening existing text puts the cursor after it, ready to add to it, unless a click already placed it.
+                if draft.layerID != nil, self.textView.selectedRange() == NSRange(location: 0, length: 0) {
+                    self.textView.setSelectedRange(NSRange(location: self.textView.string.utf16.count, length: 0))
+                }
             }
         }
     }
 
     func textDidChange(_ notification: Notification) {
         guard !synchronizing, let session = canvas?.session, var draft = session.textDraft else { return }
+        if let pendingStyle, pendingStyle.content == textView.string {
+            draft.style.colorRuns = pendingStyle.colorRuns
+            draft.style.fontRuns = pendingStyle.fontRuns
+        }
+        pendingStyle = nil
         draft.style.content = textView.string
+        // Text NSTextView changed without saying how can't keep its colors and faces letter for letter.
+        if !draft.style.isValid { draft.style.colorRuns = nil; draft.style.fontRuns = nil }
+        draft.selection = textView.selectedRange()
         shownStyle = draft.style
         session.textDraft = draft
         // NSTextView draws the changed glyphs itself. Refresh the box's overflow marker
@@ -179,7 +243,35 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
         needsDisplay = true
     }
     func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
-        textView.string.utf16.count - affectedCharRange.length + (replacementString?.utf16.count ?? 0) <= 100_000
+        let length = replacementString?.utf16.count ?? 0
+        guard textView.string.utf16.count - affectedCharRange.length + length <= 100_000 else { return false }
+        if !synchronizing, let draft = canvas?.session.textDraft,
+           draft.style.colorRuns != nil || draft.style.fontRuns != nil {
+            var style = pendingStyle ?? draft.style
+            guard NSMaxRange(affectedCharRange) <= style.content.utf16.count else { return true }
+            style.replaceCharacters(in: affectedCharRange, withLength: length)
+            style.content = (style.content as NSString).replacingCharacters(in: affectedCharRange, with: replacementString ?? "")
+            pendingStyle = style
+        }
+        return true
+    }
+    func textViewDidChangeSelection(_ notification: Notification) {
+        guard !synchronizing, let session = canvas?.session, session.textDraft?.id == draftID else { return }
+        let selection = textView.selectedRange()
+        if textView.holdsSelection, selection.length == 0, (session.textDraft?.selection.length ?? 0) > 0 { return }
+        textView.holdsSelection = false
+        if session.textDraft?.selection != selection { session.textDraft?.selection = selection }
+        if let style = session.textDraft?.style { updateInsertionPointColor(style) }
+    }
+    /// Puts back a selection a focus change wiped, so the font menu still edits those letters.
+    func keepSelection(_ range: NSRange) {
+        guard range.length > 0, let session = canvas?.session, session.textDraft?.id == draftID else { return }
+        if session.textDraft?.selection != range { session.textDraft?.selection = range }
+    }
+    private func updateInsertionPointColor(_ style: LayerTextStyle) {
+        let location = textView.selectedRange().location
+        let color = style.color(at: location > 0 ? location - 1 : 0)
+        textView.insertionPointColor = NSColor(srgbRed: color.red, green: color.green, blue: color.blue, alpha: 1)
     }
 
     private var handleTracking: NSTrackingArea?
@@ -231,28 +323,51 @@ final class InlineTextEditor: NSView, NSTextViewDelegate {
     override func mouseEntered(with event: NSEvent) { showCursor(at: convert(event.locationInWindow, from: nil)) }
     override func mouseMoved(with event: NSEvent) { showCursor(at: convert(event.locationInWindow, from: nil)) }
     override func cursorUpdate(with event: NSEvent) { showCursor(at: convert(event.locationInWindow, from: nil)) }
-    override func mouseExited(with event: NSEvent) { NSCursor.iBeam.set() }
+    override func mouseExited(with event: NSEvent) { NSCursor.setHiddenUntilMouseMoves(false) }
     private func showCursor(at point: CGPoint) {
+        guard bounds.insetBy(dx: -edgeReach, dy: -edgeReach).contains(point) else {
+            NSCursor.setHiddenUntilMouseMoves(false)
+            NSCursor.arrow.set()
+            return
+        }
         guard resize == nil, canvas?.session.colorPicker == nil else { return }
         guard let index = handle(at: point) else { NSCursor.iBeam.set(); return }
         handleCursor(index).set()
     }
 
     /// Every mouse move while the box is open, wherever the pointer is. Tracking areas stop arriving once the text
-    /// surface has the mouse, which left the cursor stuck on whatever it was last set to.
+    /// surface has the mouse, which left the cursor stuck on whatever it was last set to. Inside the box it's the
+    /// I-beam or a resize arrow; over the rest of the canvas, the Type tool's I-beam; leaving the canvas, the arrow,
+    /// set once on the way out so the toolbar's own controls keep their cursors.
     private var moveMonitor: Any?
+    private var pointerOnCanvas = true
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if let moveMonitor { NSEvent.removeMonitor(moveMonitor); self.moveMonitor = nil }
         guard window != nil else { return }
         moveMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
             guard let self, self.window === event.window else { return event }
-            self.showCursor(at: self.convert(event.locationInWindow, from: nil))
+            self.pointerMoved(event)
             return event
         }
     }
     deinit {
         if let moveMonitor { NSEvent.removeMonitor(moveMonitor) }
+    }
+    func pointerMoved(_ event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if bounds.insetBy(dx: -edgeReach, dy: -edgeReach).contains(point) {
+            pointerOnCanvas = true
+            showCursor(at: point)
+        } else if let canvas, canvas.bounds.contains(canvas.convert(event.locationInWindow, from: nil)) {
+            pointerOnCanvas = true
+            guard resize == nil, canvas.session.colorPicker == nil else { return }
+            NSCursor.iBeam.set()
+        } else if pointerOnCanvas {
+            pointerOnCanvas = false
+            NSCursor.setHiddenUntilMouseMoves(false)
+            NSCursor.arrow.set()
+        }
     }
 
     /// The arrows for the edge or corner a handle resizes, turned with the text box.

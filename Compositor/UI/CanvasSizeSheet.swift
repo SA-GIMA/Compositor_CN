@@ -3,22 +3,48 @@ import SwiftUI
 struct CanvasSizeSheet: View {
     let foreground: PaletteColor
     let background: PaletteColor
+    let session: EditorSession
     let finish: (CanvasSizeOptions?) -> Void
     @State private var draft: CanvasSizeDraft
     @State private var anchor = 4
     @State private var extensionChoice = "透明"
-    @State private var customColor = Color.white
+    @State private var customColor = PaletteColor.white
     private let anchorNames = ["左上", "上中", "右上", "左中", "中心", "右中", "左下", "下中", "右下"]
 
-    init(document: CanvasDocument, foreground: PaletteColor = .black, background: PaletteColor = .white, finish: @escaping (CanvasSizeOptions?) -> Void) {
-        self.foreground = foreground
-        self.background = background
+    init(document: CanvasDocument, session: EditorSession, finish: @escaping (CanvasSizeOptions?) -> Void) {
+        self.foreground = session.foregroundColor
+        self.background = session.backgroundColor
+        self.session = session
         self.finish = finish
         _draft = State(initialValue: CanvasSizeDraft(width: document.width, height: document.height, resolution: document.resolution))
     }
 
     private func dimension(_ widthAxis: Bool) -> Binding<Double> {
         Binding(get: { draft.displayed(widthAxis: widthAxis) }, set: { draft.set($0, widthAxis: widthAxis) })
+    }
+    private func scrubRange(_ widthAxis: Bool) -> ClosedRange<Double> {
+        let original = Double(widthAxis ? draft.originalWidth : draft.originalHeight)
+        let other = Double(widthAxis ? draft.originalHeight : draft.originalWidth)
+        let lower = draft.locked ? max(1, original / other) : 1.0
+        let upper = draft.locked ? min(30_000, 30_000 * original / other) : 30_000.0
+        func displayed(_ pixels: Double) -> Double {
+            let difference = pixels - (draft.relative ? original : 0)
+            switch draft.unit {
+            case .pixels: return difference
+            case .percent: return difference / original * 100
+            case .inches: return difference / draft.resolution
+            case .centimeters: return difference / draft.resolution * 2.54
+            }
+        }
+        return displayed(lower)...displayed(upper)
+    }
+    private func scrubSensitivity(_ widthAxis: Bool) -> Double {
+        switch draft.unit {
+        case .pixels: return 1
+        case .percent: return 100 / Double(widthAxis ? draft.originalWidth : draft.originalHeight)
+        case .inches: return 1 / draft.resolution
+        case .centimeters: return 2.54 / draft.resolution
+        }
     }
     private func bytes(_ width: Int, _ height: Int) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(width) * Int64(height) * 4, countStyle: .memory)
@@ -31,7 +57,7 @@ struct CanvasSizeSheet: View {
         case "前景色": color = foreground.nsColor
         case "白色": color = .white
         case "背景色": color = background.nsColor
-        default: color = NSColor(customColor)
+        default: color = customColor.nsColor
         }
         guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
         return CanvasExtensionColor(red: rgb.redComponent, green: rgb.greenComponent, blue: rgb.blueComponent)
@@ -46,14 +72,18 @@ struct CanvasSizeSheet: View {
                 .font(.callout).foregroundStyle(.secondary)
             Divider()
             Picker("单位", selection: $draft.unit) {
-                ForEach(CanvasUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                ForEach(CanvasUnit.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
             }
             HStack {
                 Text("宽度").frame(width: 60, alignment: .leading)
+                    .scrubbable(sensitivity: scrubSensitivity(true), value: dimension(true), range: scrubRange(true), step: 1)
                 TextField("宽度", value: dimension(true), format: .number.precision(.fractionLength(0...3)))
             }
             HStack {
                 Text("高度").frame(width: 60, alignment: .leading)
+                    .scrubbable(sensitivity: scrubSensitivity(false), value: dimension(false), range: scrubRange(false), step: 1)
                 TextField("高度", value: dimension(false), format: .number.precision(.fractionLength(0...3)))
             }
             Toggle("相对于当前尺寸", isOn: $draft.relative)
@@ -65,7 +95,7 @@ struct CanvasSizeSheet: View {
                 Text("新尺寸：\(Int(draft.width.rounded())) × \(Int(draft.height.rounded())) 像素 · \(bytes(Int(draft.width.rounded()), Int(draft.height.rounded()))) 未压缩")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                Text("最终尺寸每边须为 1–30,000 像素。")
+                Text("Final dimensions must be 1–\(DocumentLimits.maxSide.formatted()) pixels per side.")
                     .font(.callout).foregroundStyle(.orange)
             }
             HStack(alignment: .top, spacing: 24) {
@@ -98,13 +128,18 @@ struct CanvasSizeSheet: View {
                 ForEach(["透明", "前景色", "背景色", "黑色", "白色", "自定"], id: \.self) { Text($0) }
             }
             if extensionChoice == "自定" {
-                ColorPicker("扩展颜色", selection: $customColor, supportsOpacity: false)
+                HStack(spacing: 8) {
+                    Text("扩展颜色")
+                    DialogColorSwatch(title: "扩展颜色", color: $customColor, session: session)
+                        .help("扩展画布所填充的颜色")
+                }
             }
             HStack {
-                Button("取消") { finish(nil) }.configuredNativeShortcut(.escape)
+                Button("取消") { DialogColorSwatch.closePicker(session); finish(nil) }.configuredNativeShortcut(.escape)
                 Spacer()
                 Button("好") {
                     guard draft.valid else { return }
+                    DialogColorSwatch.closePicker(session)
                     finish(CanvasSizeOptions(width: Int(draft.width.rounded()), height: Int(draft.height.rounded()), anchor: anchor, fill: fill))
                 }.configuredNativeShortcut(.return).disabled(!draft.valid)
             }

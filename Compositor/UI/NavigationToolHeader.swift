@@ -25,7 +25,9 @@ struct NavigationToolHeader: View {
                     .accessibilityLabel("缩放百分比")
                     .help("缩放百分比（0.1–3200%）。按 Return 应用。")
                     .disabled(session.document == nil || session.showsBusy)
-                    .unitSuffix("%")
+                    .unitSuffix("%", scrubValue: Binding<Double>(
+                        get: { Double(session.viewport.zoom * 100) }, set: { step($0) }),
+                        sensitivity: 1, range: 0.1...3200)
             }
             Spacer()
         }

@@ -964,6 +964,28 @@
         "ImageLayer(name: \"Tip\", blankSize: size)",
         "ImageLayer(name: \"笔尖\", blankSize: size)"
       ]
+    ],
+    "UI/BlendModePicker.swift": [
+      [
+        "for mode in group { button.addItem(withTitle: mode.rawValue) }",
+        "for mode in group { button.addItem(withTitle: mode.displayName) }"
+      ],
+      [
+        "guard let mode = item.flatMap({ LayerBlendMode(rawValue: $0.title) }) else { return }",
+        "guard let title = item?.title, let mode = LayerBlendMode.allCases.first(where: { $0.displayName == title }) else { return }"
+      ]
+    ],
+    "UI/CameraRawControls.swift": [
+      [
+        "    private enum Section: String, CaseIterable, Identifiable {\n        case light = \"Light\"\n        case color = \"Color\"\n        case colorGrading = \"Color Grading\"\n        case effects = \"Effects\"\n        case curve = \"Curve\"\n        case colorMixer = \"Color Mixer\"\n        case detail = \"Detail\"\n        case optics = \"Optics\"\n        case geometry = \"Geometry\"\n        case calibration = \"Calibration\"\n        var id: String { rawValue }\n    }",
+        "    private enum Section: String, CaseIterable, Identifiable {\n        case light = \"光线\"\n        case color = \"颜色\"\n        case colorGrading = \"分级\"\n        case effects = \"效果\"\n        case curve = \"曲线\"\n        case colorMixer = \"混色器\"\n        case detail = \"细节\"\n        case optics = \"光学\"\n        case geometry = \"几何\"\n        case calibration = \"校准\"\n        var id: String { rawValue }\n    }"
+      ]
+    ],
+    "Document/ImageTrim.swift": [
+      [
+        "enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {\n    case transparentPixels = \"Transparent Pixels\"\n    case topLeftPixelColor = \"Top Left Pixel Color\"\n    case bottomRightPixelColor = \"Bottom Right Pixel Color\"",
+        "enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {\n    case transparentPixels = \"透明像素\"\n    case topLeftPixelColor = \"左上角像素颜色\"\n    case bottomRightPixelColor = \"右下角像素颜色\""
+      ]
     ]
   },
   "global": []

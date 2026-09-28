@@ -10,6 +10,16 @@ struct HueSaturationSheet: View {
     private var hueRange: ClosedRange<Double> { current.colorize ? 0...360 : -180...180 }
     private var saturationRange: ClosedRange<Double> { current.colorize ? 0...100 : -100...100 }
     private var showsSpectrum: Bool { current.range != .master && !current.colorize }
+    /// What a double-click puts a slider back to: Photoshop's colorize start, or no change.
+    private var resetValues: HueSaturationSettings { current.colorize ? .colorizeStart : HueSaturationSettings() }
+    /// The middle of the selected color range; Master centers on red.
+    private var rangeHue: Double { Double(max(0, ColorRange.colorRanges.firstIndex(of: current.range) ?? 0)) * 60 }
+    /// Colorizing picks an absolute hue, red to red; otherwise the track shows the shift around the range's color.
+    private var hueTrack: CameraRawSliderTrack { .spectrum(current.colorize ? 180 : rangeHue) }
+    private var saturationTrack: CameraRawSliderTrack {
+        if current.colorize { return .saturation(current.hue) }
+        return current.range == .master ? .chroma : .saturation(rangeHue)
+    }
 
     private var settings: Binding<HueSaturationSettings> {
         Binding(get: { current },
@@ -24,15 +34,19 @@ struct HueSaturationSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Picker("范围", selection: settings.range) {
-                    ForEach(ColorRange.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    ForEach(ColorRange.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
+                }
                 }
                 .pickerStyle(.menu).frame(width: 160).labelsHidden().disabled(current.colorize)
                 Spacer()
                 samplingControls
             }
-            slider("色相", value: settings.hue, range: hueRange, unit: "°")
-            slider("饱和度", value: settings.saturation, range: saturationRange, unit: "")
-            slider("明度", value: settings.lightness, range: -100...100, unit: "")
+            slider("色相", value: settings.hue, range: hueRange, unit: "°", track: hueTrack, reset: resetValues.hue)
+            slider("饱和度", value: settings.saturation, range: saturationRange, unit: "", track: saturationTrack,
+                   reset: resetValues.saturation)
+            slider("明度", value: settings.lightness, range: -100...100, unit: "",
+                   track: .opposing(.black, .white), reset: resetValues.lightness)
             if showsSpectrum {
                 SpectrumEditor(settings: settings)
                 Toggle("改为应用于该色域之外", isOn: settings.invertRange)
@@ -109,10 +123,15 @@ struct HueSaturationSheet: View {
         .frame(width: 24, height: 20)
     }
 
-    private func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, unit: String) -> some View {
+    /// A colored slider plus an exact field. A double-click on the title or knob resets that one value.
+    private func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, unit: String,
+                        track: CameraRawSliderTrack, reset: Double) -> some View {
         HStack(spacing: 10) {
             Text(title).frame(width: 76, alignment: .leading)
-            Slider(value: value, in: range)
+                .onTapGesture(count: 2) { value.wrappedValue = reset }
+                .scrubbable(sensitivity: 1, value: value, range: range)
+            CameraRawSlider(value: value.wrappedValue, range: range, track: track, help: "\(title). Double-click to reset.",
+                            onChange: { value.wrappedValue = $0.rounded() }, onReset: { value.wrappedValue = reset })
             TextField(title, value: value, format: .number.precision(.fractionLength(0)))
                 .frame(width: 48).textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing)
                 .unitSuffix(unit)

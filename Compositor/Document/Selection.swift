@@ -326,8 +326,10 @@ extension EditorSession {
     var canModifySelection: Bool { selection?.isEmpty == false && canEditSelection && lassoDraft == nil }
 
     enum SelectionAmountOperation: String {
-        case expand = "Expand", contract = "Contract", feather = "羽化"
+        case expand = "Expand", contract = "Contract", feather = "Feather"
     }
+
+
 
     /// Menu commands ask for an amount; the tool header applies its input directly.
     func promptSelectionAmount(_ operation: SelectionAmountOperation) {

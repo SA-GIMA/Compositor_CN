@@ -8,6 +8,8 @@ struct EditorCanvas: NSViewRepresentable {
         view.consumeFocusRequest(session.canvasFocusRequest)
         _ = session.showsTransformControls // observed here so ⌘H redraws the transform box at once
         _ = session.showsGrid
+        _ = session.layoutGrid
+        _ = session.gridAppearance
         _ = session.showsGuides
         _ = session.guideDrag
         _ = session.document?.guides
@@ -18,6 +20,21 @@ struct EditorCanvas: NSViewRepresentable {
 
 final class CanvasView: NSView {
     var inlineTextEditor: InlineTextEditor?
+    /// The text being typed, rendered as the layer will hold it, remade only when its style changes.
+    private var draftTextCache: (style: LayerTextStyle, image: CGImage)?
+    /// The effects rendered for the text being edited, and what they were rendered from.
+    private var draftEffects: (image: CGImage, effects: LayerEffects, transform: LayerTransform, rendered: CGImage, inset: CGFloat)?
+    /// Which layer and text `draftEffects` were made for, so they can stand in once the edit is committed.
+    private var draftEffectsSource: (layerID: UUID, style: LayerTextStyle)?
+    /// The text being typed as pixels, where the editor shows it (see InlineTextEditor).
+    private var draftText: (image: CGImage, transform: LayerTransform)? {
+        guard let draft = session.textDraft, let transform = inlineTextEditor?.shownTransform else { draftTextCache = nil; return nil }
+        if draftTextCache?.style != draft.style {
+            guard let image = try? EditorSession.textImage(draft.style) else { draftTextCache = nil; return nil }
+            draftTextCache = (draft.style, image)
+        }
+        return draftTextCache.map { ($0.image, transform) }
+    }
     var textBoxAnchor: CGPoint?
     var textBoxRect: CGRect?
     private var lastFocusRequest = 0
@@ -26,7 +43,9 @@ final class CanvasView: NSView {
         lastFocusRequest = request
         DispatchQueue.main.async { [weak self] in
             guard let self, let window = self.window, window.attachedSheet == nil else { return }
+            // Text being edited takes the keys back (after the color picker, say), so typing and ⌘Return still reach it.
             if self.session.textDraft == nil { window.makeFirstResponder(self) }
+            else if let editor = self.inlineTextEditor { window.makeFirstResponder(editor.textView) }
         }
     }
     private let sampleRing = SampleRingOverlay()
@@ -69,7 +88,13 @@ final class CanvasView: NSView {
     private var displayedTargeting = false
     private var optionHeld = false
     private var palettePicking: Bool { session.tool == .eyedropper || (optionHeld && (session.tool == .brush || session.tool == .spotHealing || session.tool == .gradient) && session.brushStroke == nil && gradientDrag == nil) }
-    private var picking: Bool { palettePicking || session.colorPicker != nil || session.hueSampleMode != nil || session.levels?.sampleMode != nil }
+    private var picking: Bool {
+        palettePicking || (session.colorPicker != nil && !session.pickingForDialog) || session.hueSampleMode != nil || session.levels?.sampleMode != nil
+            || session.colorRange != nil
+            || session.filterEdit?.samplesWhiteBalance == true || session.filterEdit?.samplesPointColor == true
+            || session.filterEdit?.samplesDefringe == true
+            || session.filterEdit?.drawingCameraRawGeometryGuide == true
+    }
     /// View point where a targeted-adjustment drag began.
     private var hueTargetStart: CGPoint?
     private var samplingColor = false
@@ -77,6 +102,10 @@ final class CanvasView: NSView {
     private var gradientDrag: GradientHandle?
     private var antsTimer: Timer?
     private var modifierMonitor: Any?
+    private var sampleClickMonitor: Any?
+    private var cursorUpdateMonitor: Any?
+    /// A sampling click taken straight from the event stream, so its drag and release follow it here too.
+    private var sampleClickActive = false
     private var keyMonitor: Any?
     /// Document point where a selection-outline drag began.
     private var selectionDragStart: CGPoint?
@@ -391,10 +420,16 @@ final class CanvasView: NSView {
         }
         return NSCursor(image: image, hotSpot: NSPoint(x: 12, y: 12))
     }()
-    private static let eyedropperCursor: NSCursor = {
+    private static let eyedropperCursor = makeEyedropperCursor(badge: nil)
+    /// Color Range's eyedroppers while Shift (add) or Option (take away) is held, or its + or − one is chosen.
+    private static let eyedropperAddCursor = makeEyedropperCursor(badge: "plus")
+    private static let eyedropperRemoveCursor = makeEyedropperCursor(badge: "minus")
+    private static func makeEyedropperCursor(badge: String?) -> NSCursor {
         let symbol = NSImage(systemSymbolName: "eyedropper", accessibilityDescription: "取样颜色")!
         let white = symbol.withSymbolConfiguration(.init(paletteColors: [.white]))!
         let black = symbol.withSymbolConfiguration(.init(paletteColors: [.black]))!
+        let mark = badge.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 8, weight: .black).applying(.init(paletteColors: [.black])))
         let image = NSImage(size: NSSize(width: 24, height: 24), flipped: false) { _ in
             let glyph = CGRect(x: 2, y: 2, width: 20, height: 20)
             for step in 0..<16 {
@@ -402,11 +437,43 @@ final class CanvasView: NSView {
                 white.draw(in: glyph.offsetBy(dx: cos(angle) * 1.25, dy: sin(angle) * 1.25))
             }
             black.draw(in: glyph)
+            // The badge sits bottom right, clear of the dropper tip: a black + or − on a white disc with a black rim, so it
+            // reads on any image.
+            if let mark {
+                let spot = CGRect(x: 12.5, y: 0.5, width: 11, height: 11)
+                let disc = NSBezierPath(ovalIn: spot)
+                NSColor.white.setFill(); disc.fill()
+                NSColor.black.setStroke(); disc.lineWidth = 1; disc.stroke()
+                let size = mark.size
+                mark.draw(in: CGRect(x: spot.midX - size.width / 2, y: spot.midY - size.height / 2, width: size.width, height: size.height))
+            }
             return true
         }
         // The dropper tip sits at the glyph's bottom-left.
         return NSCursor(image: image, hotSpot: NSPoint(x: 3, y: 21))
-    }()
+    }
+    /// With Color Range's panel focused, anything that rebuilds this view's cursor rects (a new selection redrawn, the
+    /// panel taking the focus back after a click) leaves the arrow up until the pointer moves. Put the eyedropper back
+    /// once that's done.
+    private func keepColorRangeCursor(after delay: TimeInterval = 0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.session.colorRange != nil, self.pointerOverCanvas else { return }
+            self.pickCursor.set()
+        }
+    }
+    /// The pointer is on the canvas itself, not over a panel floating above it.
+    private var pointerOverCanvas: Bool {
+        guard let window, bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) else { return false }
+        return NSWindow.windowNumber(at: NSEvent.mouseLocation, belowWindowWithWindowNumber: 0) == window.windowNumber
+    }
+    /// The eyedropper to show now: Color Range's says whether a click adds or takes away.
+    private var pickCursor: NSCursor {
+        switch session.colorRange?.effectiveMode {
+        case .add: Self.eyedropperAddCursor
+        case .remove: Self.eyedropperRemoveCursor
+        default: Self.eyedropperCursor
+        }
+    }
 
     /// The Zoom tool's cursors: a magnifier with a plus, or a minus while Option is held.
     private static func zoomCursor(out: Bool) -> NSCursor {
@@ -469,6 +536,9 @@ final class CanvasView: NSView {
             let transform: LayerTransform
         }
         let folderMasks: [FolderMask]
+        /// The text being typed, which the canvas draws as pixels.
+        let textStyle: LayerTextStyle?
+        let textTransform: LayerTransform?
     }
 
     @discardableResult
@@ -485,6 +555,7 @@ final class CanvasView: NSView {
         if session.tool != .type, textBoxRect != nil { textBoxAnchor = nil; textBoxRect = nil; needsDisplay = true }
         // Image identity detects raster replacement without comparing pixel data.
         let document = session.document
+        let documentPresenceChanged = (displayedState?.documentID != nil) != (document != nil)
         // Folders hold no pixels and so aren't listed below; their opacity reaches the canvas
         // through the layers inside them, which is what has to be watched for a change.
         let opacities = document?.effectiveOpacities ?? [:]
@@ -497,7 +568,7 @@ final class CanvasView: NSView {
             folderMasks: (document?.layers ?? []).filter { $0.isGroup && $0.mask != nil }.map {
                 DisplayState.FolderMask(id: $0.id, maskID: $0.mask?.enabledImage.map { ObjectIdentifier($0) },
                                         transform: session.displayedTransform(for: $0))
-            })
+            }, textStyle: session.textDraft?.style, textTransform: session.textDraft == nil ? nil : inlineTextEditor?.shownTransform)
         var changed = false
         if displayedState != state {
             if let previous = displayedState, previous.documentID == state.documentID,
@@ -513,6 +584,10 @@ final class CanvasView: NSView {
             displayedState = state
             changed = true
         }
+        if documentPresenceChanged {
+            updateTrackingAreas()
+            window?.invalidateCursorRects(for: self)
+        }
         if displayedTool != session.tool {
             displayedTool = session.tool
             updateTrackingAreas()
@@ -525,9 +600,14 @@ final class CanvasView: NSView {
             sampleRing.isHidden = true
             updateTrackingAreas()
             window?.invalidateCursorRects(for: self)
-            if picking, let window, bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) {
-                Self.eyedropperCursor.set()
+            // Cursor rects only apply when the pointer enters them, so update an existing document's
+            // cursor here when picking starts or ends. An empty canvas leaves the form's cursor alone.
+            if session.document != nil, let window,
+               bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) {
+                if picking { pickCursor.set() } else { restoreToolCursor() }
             }
+            // Color Range's panel appears, and takes the focus, a moment after it opens.
+            if session.colorRange != nil { keepColorRangeCursor(); keepColorRangeCursor(after: 0.15) }
         }
         if displayedCropRect != transformOverlay.cropViewRect {
             displayedCropRect = transformOverlay.cropViewRect
@@ -593,7 +673,37 @@ final class CanvasView: NSView {
         syncGeometry()
         if let modifierMonitor { NSEvent.removeMonitor(modifierMonitor); self.modifierMonitor = nil }
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor); self.keyMonitor = nil }
+        if let sampleClickMonitor { NSEvent.removeMonitor(sampleClickMonitor); self.sampleClickMonitor = nil }
+        if let cursorUpdateMonitor { NSEvent.removeMonitor(cursorUpdateMonitor); self.cursorUpdateMonitor = nil }
         guard window != nil else { return }
+        // Sampling the canvas for an open panel (the color picker, Levels, a filter) handles the click here, before
+        // the window sees it: a click would make this window key, and the panel would lose focus and its shadow
+        // would fade until the release gave focus back.
+        // With Color Range's panel focused, the cursor update AppKit sends after Shift or Option changes reaches a view
+        // that answers with the arrow. Over the canvas, answer it here with the eyedropper instead.
+        cursorUpdateMonitor = NSEvent.addLocalMonitorForEvents(matching: .cursorUpdate) { [weak self] event in
+            guard let self, self.session.colorRange != nil, self.pointerOverCanvas else { return event }
+            self.pickCursor.set()
+            return nil
+        }
+        sampleClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            guard let self, let window = self.window, event.window === window else { return event }
+            switch event.type {
+            case .leftMouseDown:
+                guard self.picking, !window.isKeyWindow, NSApp.keyWindow is NSPanel,
+                      let hit = window.contentView?.hitTest(event.locationInWindow), hit.isDescendant(of: self) else { return event }
+                self.sampleClickActive = true
+                self.mouseDown(with: event)
+            case .leftMouseDragged:
+                guard self.sampleClickActive else { return event }
+                self.mouseDragged(with: event)
+            default:
+                guard self.sampleClickActive else { return event }
+                self.sampleClickActive = false
+                self.mouseUp(with: event)
+            }
+            return nil
+        }
         optionHeld = NSEvent.modifierFlags.contains(.option)
         // A tab mounts a new canvas. Restore keyboard focus after SwiftUI finishes
         // installing it, without taking focus from a newly presented dialog.
@@ -608,6 +718,17 @@ final class CanvasView: NSView {
         modifierMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self else { return event }
             self.optionHeld = event.modifierFlags.contains(.option)
+            // Color Range: Shift adds and Option takes away, shown on the eyedropper and in its panel as they're held.
+            if let edit = self.session.colorRange {
+                let flags = event.modifierFlags
+                let held: HueSampleMode? = flags.contains(.option) ? .remove : flags.contains(.shift) ? .add : nil
+                if edit.held != held {
+                    edit.held = held
+                    // Now, and again once AppKit is done with the key change, in case anything set the arrow meanwhile.
+                    if self.pointerOverCanvas { self.pickCursor.set() }
+                    self.keepColorRangeCursor()
+                }
+            }
             // A Marquee drag reshapes as Shift goes down or up, without waiting for the mouse to move.
             if let pixel = self.marqueeDragPixel, let kind = self.session.lassoDraft?.kind, kind == .rectangle || kind == .ellipse {
                 self.dragMarqueeDraft(to: pixel, flags: event.modifierFlags)
@@ -621,13 +742,16 @@ final class CanvasView: NSView {
             self.updateBrushCursor()
             // Only while the pointer is over the canvas: rebuilding its cursor rects with the pointer somewhere
             // else (the Layers panel, holding Option for a clipping mask) takes that view's cursor away.
-            if let window = self.window, self.visibleRect.contains(self.convert(window.mouseLocationOutsideOfEventStream, from: nil)) {
+            // Not while Color Range is open: its eyedropper covers the whole canvas anyway, and with its panel focused
+            // the rebuild shows the arrow for a moment before the eyedropper comes back.
+            if self.session.document != nil, self.session.colorRange == nil, let window = self.window,
+               self.visibleRect.contains(self.convert(window.mouseLocationOutsideOfEventStream, from: nil)) {
                 self.window?.invalidateCursorRects(for: self)
             }
             self.session.updateHeldSelectionKeys(shift: event.modifierFlags.contains(.shift),
                                                  option: event.modifierFlags.contains(.option))
             if self.session.tool.isSelectionTool { self.refreshLassoCursor(event.modifierFlags) }
-            if self.session.tool == .move, let window = self.window {
+            if self.session.document != nil, self.session.tool == .move, let window = self.window {
                 let point = self.convert(window.mouseLocationOutsideOfEventStream, from: nil)
                 if self.visibleRect.contains(point) { self.updateTransformCursor(at: point, flags: event.modifierFlags) }
             }
@@ -638,8 +762,10 @@ final class CanvasView: NSView {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let originalEvent = event
             guard let event = ShortcutSettings.shared.canvasEvent(event) else { return originalEvent }
-            guard let self, let window = self.window, event.window === window, !(window.firstResponder is NSText),
-                  event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+            guard let self, let window = self.window, event.windowNumber == window.windowNumber,
+                  !(window.firstResponder is NSText) else { return originalEvent }
+            if self.handleKeyboardZoom(event) { return nil }
+            guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
                   let key = event.charactersIgnoringModifiers else { return originalEvent }
             // Shift-+ / Shift-− step the active layer's blend mode, in every tool.
             if event.modifierFlags.contains(.shift), key == "+" || key == "_" || event.keyCode == 24 || event.keyCode == 27 {
@@ -653,6 +779,26 @@ final class CanvasView: NSView {
             else { self.session.changeBrushHardness(increase: key == "}") }
             return nil
         }
+    }
+
+    /// Handle default zoom shortcuts on keyDown, including key repeat, without waiting for a menu command.
+    private func handleKeyboardZoom(_ event: NSEvent) -> Bool {
+        guard session.document != nil, event.modifierFlags.contains(.command),
+              event.modifierFlags.intersection([.control, .option]).isEmpty else { return false }
+
+        let zoomInIsDefault = ShortcutDefinition.all.first(where: { $0.isMenu && $0.title == "Zoom In" })
+            .map { ShortcutSettings.shared.chord($0) == $0.original } ?? true
+        let zoomOutIsDefault = ShortcutDefinition.all.first(where: { $0.isMenu && $0.title == "Zoom Out" })
+            .map { ShortcutSettings.shared.chord($0) == $0.original } ?? true
+
+        // '+' is '=' with Shift on a Mac keyboard; the keypad has its own key codes.
+        let isZoomIn = [24, 69].contains(event.keyCode)
+        let isZoomOut = [27, 78].contains(event.keyCode) && !event.modifierFlags.contains(.shift)
+        guard (isZoomIn && zoomInIsDefault) || (isZoomOut && zoomOutIsDefault) else { return false }
+
+        session.zoomKeyboard(by: isZoomIn ? 1 : -1)
+        synchronizeDisplay()
+        return true
     }
 
     private var lassoCursor: NSCursor { lassoCursor(flags: NSEvent.modifierFlags) }
@@ -681,6 +827,7 @@ final class CanvasView: NSView {
 
     /// Re-applies the lasso cursor now if the pointer is over the canvas.
     private func refreshLassoCursor(_ flags: NSEvent.ModifierFlags = NSEvent.modifierFlags) {
+        guard session.document != nil else { return }
         window?.invalidateCursorRects(for: self)
         guard session.tool.isSelectionTool, !spaceHeld, !picking, let window,
               bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) else { return }
@@ -770,17 +917,61 @@ final class CanvasView: NSView {
     }
 
     private func drawLayers(_ document: CanvasDocument, scale: CGFloat, center: @escaping (CGPoint) -> CGPoint, in context: CGContext, onSurface: Bool = false) {
+        // Text editing just ended: if the layer now holds the text as it was last typed, its effects from the edit stand
+        // in until they're rebuilt from the committed pixels, so they don't blink off for a frame.
+        if session.textDraft == nil, let built = draftEffects, let source = draftEffectsSource {
+            if document.layers.first(where: { $0.id == source.layerID })?.liveText?.style == source.style {
+                session.effectsPreviews.seed(source.layerID, image: built.rendered,
+                    placement: LayerEffectsRenderer.placed(built.transform, image: built.rendered, inset: built.inset))
+            }
+            draftEffects = nil
+            draftEffectsSource = nil
+        }
         session.effectsPreviews.prepare(layers: document.layers)
         // Color Burn and Color Dodge are blended by hand against the pixels under them, which needs a surface to
         // read back (see SeparableBlend).
         if !onSurface, document.layers.contains(where: { $0.adjustment != nil
             || SeparableBlend.needsSurface(session.displayedBlendMode(for: $0)) }) {
-            AdjustmentSurface.draw(in: context) { self.drawLayers(document, scale: scale, center: center, in: $0, onSurface: true) }
+            let visible = document.effectiveVisibleIDs
+            let padding = document.layers.filter { visible.contains($0.id) }
+                .compactMap(\.adjustment).map(\.samplingMargin).max() ?? 0
+            AdjustmentSurface.draw(in: context, padding: padding * scale) {
+                self.drawLayers(document, scale: scale, center: center, in: $0, onSurface: true)
+            }
             return
         }
         let byID = Dictionary(uniqueKeysWithValues: document.layers.map { ($0.id, $0) })
         func drawOwn(_ id: UUID, _ context: CGContext) {
-            guard let layer = byID[id], layer.id != session.textDraft?.layerID else { return }
+            guard let layer = byID[id] else { return }
+            // Text being edited draws as it will be committed, in its place among the layers.
+            if layer.id == session.textDraft?.layerID {
+                guard let text = draftText else { return }
+                let opacity = layer.effectiveOpacity(in: byID)
+                // Its effects stay on while it's edited, redone from the text as typed. Until a change has been redone,
+                // the last effects stand in under the new text rather than blinking off.
+                if let effects = layer.effects?.visible, !effects.isEmpty, effects.isValid {
+                    // Redone only when the text's pixels, its place or its effects change.
+                    if draftEffects?.image !== text.image || draftEffects?.effects != effects || draftEffects?.transform != text.transform {
+                        let mask = layer.mask.flatMap { owned -> CGImage? in
+                            guard let placement = owned.placement else { return owned.enabledImage }
+                            return owned.clipImage(placement: placement, over: text.transform,
+                                                   width: text.image.width, height: text.image.height, limit: 2048)
+                        }
+                        draftEffects = session.effectsPreviews.renderNow(image: text.image, mask: mask, effects: effects)
+                            .map { (text.image, effects, text.transform, $0.image, $0.inset) }
+                        draftEffectsSource = session.textDraft.map { (layer.id, $0.style) }
+                    }
+                    if let built = draftEffects {
+                        let grown = LayerEffectsRenderer.placed(text.transform, image: built.rendered, inset: built.inset)
+                        LayerRenderer.draw(built.rendered, transform: grown, center: center(grown.center), scale: scale,
+                            opacity: opacity, blendMode: blendMode(of: layer), mask: nil, in: context)
+                        return
+                    }
+                }
+                LayerRenderer.draw(text.image, transform: text.transform, center: center(text.transform.center), scale: scale,
+                    opacity: opacity, blendMode: blendMode(of: layer), in: context)
+                return
+            }
             // A folder the layer sits in dims it along with everything else inside (see LayerOpacity).
             let opacity = layer.effectiveOpacity(in: byID)
             let mode = session.displayedBlendMode(for: layer)
@@ -792,7 +983,8 @@ final class CanvasView: NSView {
             let stroke = session.brushStroke?.layer.id == layer.id ? session.brushStroke
                 : session.gradientEdit?.raster.layer.id == layer.id ? session.gradientEdit?.raster
                 : session.pixelMove?.raster.layer.id == layer.id ? session.pixelMove?.raster : nil
-            guard layer.asset != nil || stroke != nil else { return }
+            // An empty layer has nothing to draw, unless a filter (Vignette) is previewing pixels onto it.
+            guard layer.asset != nil || stroke != nil || session.filterEdit?.previewImage(for: layer.id) != nil else { return }
             // Smudge or Liquify in progress: the layer as the stroke has reshaped it so far, across the canvas.
             if let warp = session.warpStroke, warp.layer.id == layer.id, let image = warp.image {
                 let canvas = LayerTransform(origin: .zero, size: document.size)
@@ -803,8 +995,15 @@ final class CanvasView: NSView {
             }
             // A pending distortion shows the layer warped into its new shape — with its effects warped along with
             // it, so they stay on while the corners move.
+            // Asked only while corners are being dragged: the request it makes stands for the layer's effects in the
+            // preview cache, so made on every redraw it would stand in for the normal one below.
             if stroke == nil, layer.effects?.visible.isEmpty == false,
-               let effects = session.effectsPreviews.preview(for: layer, mask: layer.mask?.enabledImage,
+               let edit = session.transformEdit, !edit.mask, edit.corners != nil,
+               let effects = session.effectsPreviews.preview(for: layer,
+                    // A mask on its own placement, resampled into the layer's grid as the layer draws it.
+                    mask: layer.mask?.clipImage(placement: session.displayedMaskPlacement(for: layer), over: layer.transform,
+                        width: layer.asset?.image.width ?? Int(layer.size.width.rounded()),
+                        height: layer.asset?.image.height ?? Int(layer.size.height.rounded()), limit: 2048),
                     transform: layer.transform, maskPlacement: session.displayedMaskPlacement(for: layer),
                     completion: { [weak self] in self?.needsDisplay = true }),
                let warped = session.distortedEffects(for: layer, effects: effects.image, inset: effects.inset) {
@@ -819,7 +1018,10 @@ final class CanvasView: NSView {
                 return
             }
             // A mask stroke paints the mask's grid; the layer itself stays put.
-            let transform = (stroke?.isMask == true ? nil : stroke?.paintTransform) ?? session.displayedTransform(for: layer)
+            // A mask on its own placement paints in its own grid and draws the layer where it is; any other stroke's grid,
+            // grown past the layer, is where the brush paints.
+            let transform = (stroke?.isMask == true && stroke?.layer.mask?.placement != nil ? nil : stroke?.paintTransform)
+                ?? session.displayedTransform(for: layer)
             // A mask placed apart from its layer is resampled into the grid the layer draws in (at most 2048 pixels
             // across while something moves, else about the size it's drawn).
             let mask: CGImage? = {
@@ -879,7 +1081,16 @@ final class CanvasView: NSView {
             } else if let stroke, let placement = stroke.layer.mask?.placement {
                 // A mask on its own placement is painted in its own grid: the layer draws through the mask as the
                 // stroke leaves it, resampled into the layer's grid.
-                let preview = stroke.placedMaskPreview(placement: placement)
+                let preview = stroke.placedMaskPreview(placement: stroke.paintTransform)
+                // With effects on, they're redone as the mask changes, from the mask as it's being left.
+                if let preview, let surface = placedMaskSurface(layer: layer, stroke: stroke, placement: placement, preview: preview),
+                   let built = surface.image {
+                    let grown = LayerEffectsRenderer.placed(transform, image: built, inset: surface.margin)
+                    surface.placement = grown
+                    LayerRenderer.draw(built, transform: grown, center: center(grown.center), scale: scale,
+                        opacity: opacity, blendMode: blendMode(of: layer), mask: nil, in: context)
+                    return
+                }
                 if let raster = stroke.layer.asset?.raster {
                     TiledLayerRenderer.drawRaster(raster, transform: transform, center: center(transform.center), scale: scale,
                         opacity: opacity, blendMode: blendMode(of: layer), mask: preview, in: context)
@@ -888,6 +1099,14 @@ final class CanvasView: NSView {
                         opacity: opacity, blendMode: blendMode(of: layer), mask: preview, in: context)
                 }
             } else if let stroke {
+                // With effects on, the surface redoes them as the mask changes, so they stay on while it's painted.
+                if let surface = strokeSurface(layer: layer, stroke: stroke, mask: nil), let built = surface.image {
+                    let grown = LayerEffectsRenderer.placed(transform, image: built, inset: surface.margin)
+                    surface.placement = grown
+                    LayerRenderer.draw(built, transform: grown, center: center(grown.center), scale: scale,
+                        opacity: opacity, blendMode: blendMode(of: layer), mask: nil, in: context)
+                    return
+                }
                 // Painting the mask shows the layer through the mask as it will be once committed, the same way.
                 let previous = stroke.layer.asset
                 TiledLayerRenderer.drawMaskStroke(width: stroke.width, height: stroke.height, sourceRect: stroke.sourceRect,
@@ -913,10 +1132,20 @@ final class CanvasView: NSView {
             drawOwn(id, context)
             guard id == session.activeLayerID else { return }
             drawShapeDraft(scale: scale, center: center, in: context)
+            drawNewText(context)
+        }
+        // New text goes where its layer will: just above the active layer, or on top when that isn't drawn (a
+        // folder, a hidden layer, or none).
+        var drewNewText = false
+        func drawNewText(_ context: CGContext) {
+            guard !drewNewText, session.textDraft?.layerID == nil, let text = draftText else { return }
+            drewNewText = true
+            LayerRenderer.draw(text.image, transform: text.transform, center: center(text.transform.center), scale: scale, in: context)
         }
         let live = LiveMaskRenderer(bounds: context.boundingBoxOfClipPath, source: { byID[$0]?.maskSourceID }, drawOwn: drawOwnWithDraft)
         live.adjustment = { byID[$0]?.adjustment }
         live.adjustmentOpacity = { byID[$0]?.effectiveOpacity(in: byID) ?? 1 }
+        live.adjustmentScale = scale
         let area = context.boundingBoxOfClipPath
         live.adjustmentClip = { [weak self] id, ctx in
             guard let self, let layer = byID[id], layer.mask?.isEnabled == true else { return }
@@ -943,6 +1172,7 @@ final class CanvasView: NSView {
             let origin = center(transform.center)
             return { clip.apply(scale: scale, center: origin, in: $0) }
         }, in: context) { live.drawComposite($0, in: context) }
+        drawNewText(context)
     }
 
     /// The shape being dragged out with the Shape tool, drawn in the color it will be made in.
@@ -981,7 +1211,50 @@ final class CanvasView: NSView {
             strokeSurface = LayerEffectsSurface(layerID: layer.id, effects: effects, grid: grid, sourceRect: stroke.sourceRect)
         }
         guard let surface = strokeSurface else { return nil }
-        surface.update(base: stroke.layer.asset?.image, patches: stroke.patches, mask: mask)
+        if stroke.isMask {
+            // The mask as the stroke leaves it, over a region of the grid: beyond the old mask an edit reveals, as it
+            // does once committed.
+            let old = stroke.layer.mask?.asset.image, patches = stroke.patches, sourceRect = stroke.sourceRect, background = stroke.maskBackground
+            surface.update(base: stroke.layer.asset?.image, patches: [], mask: nil, maskStroke: .init(patches: patches, toGrid: .identity) { region in
+                guard let coverage = try? BrushRaster.context(width: Int(region.width), height: Int(region.height), mask: true) else { return nil }
+                coverage.translateBy(x: -region.minX, y: -region.minY)
+                coverage.setFillColor(gray: background, alpha: 1)
+                coverage.fill(region)
+                if let old { BrushRaster.draw(old, in: sourceRect, mask: true, context: coverage) }
+                for patch in patches where patch.rect.intersects(region) {
+                    BrushRaster.draw(patch.image, in: patch.rect, mask: true, context: coverage)
+                }
+                return coverage.makeImage()
+            })
+        } else {
+            surface.update(base: stroke.layer.asset?.image, patches: stroke.patches, mask: mask)
+        }
+        return surface
+    }
+
+    /// The effects surface for a mask on its own placement being painted. Its stroke paints in the mask's grid; the
+    /// surface stays in the layer's, and takes the mask from `preview`, the stroke's mask resampled into that grid.
+    private func placedMaskSurface(layer: ImageLayer, stroke: BrushStroke, placement: LayerTransform, preview: CGImage) -> LayerEffectsSurface? {
+        guard let effects = layer.effects?.visible, !effects.isEmpty, effects.isValid, let base = stroke.layer.asset?.image else { return nil }
+        let grid = CGSize(width: base.width, height: base.height)
+        let full = CGRect(origin: .zero, size: grid)
+        if strokeSurface?.matches(layerID: layer.id, effects: effects, grid: grid, sourceRect: full) != true {
+            strokeSurface = LayerEffectsSurface(layerID: layer.id, effects: effects, grid: grid, sourceRect: full)
+        }
+        guard let surface = strokeSurface else { return nil }
+        let toGrid = BrushRaster.pixelToDocument(stroke.paintTransform, width: stroke.width, height: stroke.height)
+            .concatenating(BrushRaster.pixelToDocument(stroke.layer.transform, width: base.width, height: base.height).inverted())
+        surface.update(base: base, patches: [], mask: nil, maskStroke: .init(patches: stroke.patches, toGrid: toGrid) { region in
+            guard let coverage = try? BrushRaster.context(width: Int(region.width), height: Int(region.height), mask: true) else { return nil }
+            coverage.translateBy(x: -region.minX, y: -region.minY)
+            coverage.interpolationQuality = .medium
+            coverage.saveGState()
+            coverage.translateBy(x: 0, y: full.maxY)
+            coverage.scaleBy(x: 1, y: -1)
+            coverage.draw(preview, in: full)
+            coverage.restoreGState()
+            return coverage.makeImage()
+        })
         return surface
     }
 
@@ -1077,9 +1350,33 @@ final class CanvasView: NSView {
         context.restoreGState()
     }
 
+    /// Puts the current tool's cursor back after picking, the way the cursor rects would on entering the canvas.
+    private func restoreToolCursor() {
+        if session.hueTargeting { NSCursor.resizeLeftRight.set() }
+        else if session.tool.isSelectionTool, !spaceHeld { lassoCursor.set() }
+        else if session.tool == .cloneStamp, session.cloneSource != nil, !optionHeld, !spaceHeld { Self.hiddenCursor.set() }
+        else { toolCursor.set() }
+    }
+
+    /// The current tool's cursor over the canvas, with nothing being picked or dragged.
+    private var toolCursor: NSCursor {
+        spaceHeld || session.tool == .hand ? .openHand
+            // The Move tool's cursor depends on the pointer (handles, Option to duplicate), so match it here.
+            : session.tool == .move ? window.map { transformCursor(at: convert($0.mouseLocationOutsideOfEventStream, from: nil)) } ?? .arrow
+            : session.tool == .type ? .iBeam
+            : session.tool == .idle ? .arrow
+            : session.tool == .zoom ? (optionHeld ? Self.zoomOutCursor : Self.zoomInCursor)
+            : .crosshair
+    }
+
     override func resetCursorRects() {
+        guard session.document != nil else { return }
         if let dragCursor { addCursorRect(bounds, cursor: dragCursor); return }
-        if picking { addCursorRect(bounds, cursor: Self.eyedropperCursor); return }
+        if picking {
+            addCursorRect(bounds, cursor: pickCursor)
+            keepColorRangeCursor()
+            return
+        }
         if session.hueTargeting { addCursorRect(bounds, cursor: .resizeLeftRight); return }
         if session.tool.isSelectionTool, !spaceHeld { addCursorRect(bounds, cursor: lassoCursor); return }
         // Clone Stamp with a source: the brush circle, its preview and the source crosshair stand in
@@ -1088,14 +1385,7 @@ final class CanvasView: NSView {
             addCursorRect(bounds, cursor: Self.hiddenCursor)
             return
         }
-        let cursor: NSCursor = spaceHeld || session.tool == .hand ? .openHand
-            // The Move tool's cursor depends on the pointer (handles, Option to duplicate), so match it here.
-            : session.tool == .move ? window.map { transformCursor(at: convert($0.mouseLocationOutsideOfEventStream, from: nil)) } ?? .arrow
-            : session.tool == .type ? .iBeam
-            : session.tool == .idle ? .arrow
-            : session.tool == .zoom ? (optionHeld ? Self.zoomOutCursor : Self.zoomInCursor)
-            : .crosshair
-        addCursorRect(bounds, cursor: cursor)
+        addCursorRect(bounds, cursor: toolCursor)
         guard session.tool == .crop, !spaceHeld else { return }
         let positions: [NSCursor.FrameResizePosition] = [.topLeft, .top, .topRight, .right, .bottomRight, .bottom, .bottomLeft, .left]
         for region in transformOverlay.cropResizeRegions.reversed() {
@@ -1109,6 +1399,7 @@ final class CanvasView: NSView {
         super.updateTrackingAreas()
         if let hoverTrackingArea { removeTrackingArea(hoverTrackingArea) }
         hoverTrackingArea = nil
+        guard session.document != nil else { return }
         // Every tool hears the mouse leave, so its cursor never follows it out of the canvas;
         // only tools whose cursor depends on where the pointer is also track movement.
         // The picker panel stays key, so sampling must track while this window is not.
@@ -1205,15 +1496,24 @@ final class CanvasView: NSView {
     }
     override func mouseEntered(with event: NSEvent) { mouseMoved(with: event) }
     override func mouseExited(with event: NSEvent) {
+        session.filterEdit?.cameraRawReadout = nil
         brushPointer = nil
         updateBrushCursor()
         // Tools set their cursor directly while over the canvas, so put the arrow back on the
         // way out. A drag keeps its cursor until mouse-up.
-        if NSEvent.pressedMouseButtons == 0 { NSCursor.arrow.set() }
+        if session.document != nil, NSEvent.pressedMouseButtons == 0 {
+            NSCursor.setHiddenUntilMouseMoves(false)
+            NSCursor.arrow.set()
+        }
     }
     override func mouseMoved(with event: NSEvent) {
+        guard session.document != nil else { return }
+        if session.filterEdit?.kind == .cameraRaw, let document = session.document {
+            let point = convert(event.locationInWindow, from: nil)
+            session.updateCameraRawReadout(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+        }
         optionHeld = event.modifierFlags.contains(.option)
-        if picking { Self.eyedropperCursor.set(); return }
+        if picking { pickCursor.set(); return }
         if session.tool.isSelectionTool {
             // Keys may have changed while the app was in the background.
             session.updateHeldSelectionKeys(shift: event.modifierFlags.contains(.shift), option: event.modifierFlags.contains(.option))
@@ -1224,13 +1524,16 @@ final class CanvasView: NSView {
             }
             return
         }
+        // An eyedropper left over from a picker that closed while the pointer was elsewhere, such as over its own panel.
+        if [Self.eyedropperCursor, Self.eyedropperAddCursor, Self.eyedropperRemoveCursor].contains(NSCursor.current) { restoreToolCursor() }
         brushPointer = convert(event.locationInWindow, from: nil)
         updateBrushCursor()
         if session.tool == .move { updateTransformCursor(at: convert(event.locationInWindow, from: nil), flags: event.modifierFlags) }
         else { super.mouseMoved(with: event) }
     }
     override func cursorUpdate(with event: NSEvent) {
-        if picking { Self.eyedropperCursor.set() }
+        guard session.document != nil else { return }
+        if picking { pickCursor.set() }
         else if session.tool.isSelectionTool, !spaceHeld { lassoCursor.set() }
         // Cursor-update events carry no modifier flags (AppKit sends one after every key change), so read
         // the keys as they are now; the event's flags would undo Option's duplicate cursor straight away.
@@ -1238,6 +1541,7 @@ final class CanvasView: NSView {
         else { super.cursorUpdate(with: event) }
     }
     private func updateTransformCursor(at point: CGPoint, flags: NSEvent.ModifierFlags = NSEvent.modifierFlags) {
+        guard session.document != nil else { return }
         transformCursor(at: point, flags: flags).set()
     }
 
@@ -1346,12 +1650,43 @@ final class CanvasView: NSView {
         window?.makeFirstResponder(self)
         guard session.document != nil, !session.isProjectBusy, !session.isImporting else { return }
         let point = convert(event.locationInWindow, from: nil)
+        if session.filterEdit?.samplesWhiteBalance == true, !spaceHeld, let document = session.document {
+            session.sampleCameraRawWhiteBalance(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            FloatingPanelController.refocus(NSUserInterfaceItemIdentifier("filterPanel"))
+            return
+        }
+        if session.filterEdit?.samplesPointColor == true, !spaceHeld, let document = session.document {
+            session.sampleCameraRawPointColor(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            FloatingPanelController.refocus(NSUserInterfaceItemIdentifier("filterPanel"))
+            return
+        }
+        if session.filterEdit?.samplesDefringe == true, !spaceHeld, let document = session.document {
+            session.sampleCameraRawDefringe(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            FloatingPanelController.refocus(NSUserInterfaceItemIdentifier("filterPanel"))
+            return
+        }
+        if session.filterEdit?.drawingCameraRawGeometryGuide == true, !spaceHeld, let document = session.document {
+            session.beginCameraRawGeometryGuide(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            return
+        }
+        if (session.filterEdit?.targetsCameraRawCurve == true || session.filterEdit?.targetsCameraRawMixer == true),
+           !spaceHeld, let document = session.document {
+            session.beginCameraRawDrag(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            return
+        }
         if session.levels?.sampleMode != nil, !spaceHeld, let document = session.document {
             session.sampleLevels(at: session.viewport.documentPoint(from: point, documentSize: document.size))
             FloatingPanelController.refocus(NSUserInterfaceItemIdentifier("levelsPanel"))
             return
         }
         if session.levels != nil, !spaceHeld, session.tool != .hand, session.tool != .zoom { return }
+        if session.colorRange != nil, !spaceHeld, let document = session.document {
+            session.sampleColorRange(at: session.viewport.documentPoint(from: point, documentSize: document.size),
+                                     shift: event.modifierFlags.contains(.shift), option: event.modifierFlags.contains(.option))
+            FloatingPanelController.refocus(NSUserInterfaceItemIdentifier("colorRangePanel"))
+            keepColorRangeCursor()
+            return
+        }
         if picking, !spaceHeld {
             if session.colorPicker != nil || (palettePicking && session.hueSampleMode == nil) {
                 samplingOriginal = session.colorPicker?.color ?? session.foregroundColor
@@ -1402,10 +1737,13 @@ final class CanvasView: NSView {
         } else if session.tool == .type {
             beginTextGesture(at: point, event: event)
         } else if session.tool == .shape, let document = session.document {
-            session.beginShape(at: session.viewport.documentPoint(from: point, documentSize: document.size))
+            session.beginShape(at: snappedCorner(session.viewport.documentPoint(from: point, documentSize: document.size),
+                                                 flags: event.modifierFlags))
         } else if session.tool == .crop {
             beginCropDrag(at: point)
         } else if session.tool == .move {
+            // Double-click live text to edit it, without switching to the Type tool first.
+            if event.clickCount >= 2, beginLiveTextEdit(at: point) { return }
             if beginGuideDrag(at: point) { return }
             beginTransformDrag(at: point, modifiers: event.modifierFlags)
         } else if session.tool == .zoom {
@@ -1413,7 +1751,17 @@ final class CanvasView: NSView {
         }
     }
     override func mouseDragged(with event: NSEvent) {
+        guard session.document != nil else { return }
         let point = convert(event.locationInWindow, from: nil)
+        if session.filterEdit?.drawingCameraRawGeometryGuide == true, session.filterEdit?.cameraRawGuideDraft != nil,
+           let document = session.document {
+            session.continueCameraRawGeometryGuide(to: session.viewport.documentPoint(from: point, documentSize: document.size))
+            return
+        }
+        if session.filterEdit?.cameraRawDrag != nil, let document = session.document {
+            session.dragCameraRaw(to: session.viewport.documentPoint(from: point, documentSize: document.size))
+            return
+        }
         if textBoxAnchor != nil { dragTextGesture(to: point); return }
         if var drag = zoomDrag {
             let dx = point.x - drag.start.x
@@ -1457,7 +1805,8 @@ final class CanvasView: NSView {
         }
         if session.shapeDraft != nil, lastDragPoint == nil, let document = session.document {
             // Unlike the Marquee, Option has no other job here, so it draws from the center as in Photoshop.
-            session.dragShape(to: session.viewport.documentPoint(from: point, documentSize: document.size),
+            session.dragShape(to: snappedCorner(session.viewport.documentPoint(from: point, documentSize: document.size),
+                                                flags: event.modifierFlags),
                               square: event.modifierFlags.contains(.shift), fromCenter: event.modifierFlags.contains(.option))
             synchronizeDisplay()
             return
@@ -1572,6 +1921,10 @@ final class CanvasView: NSView {
         window?.invalidateCursorRects(for: self)
     }
     override func mouseUp(with event: NSEvent) {
+        if session.filterEdit?.cameraRawGuideDraft != nil {
+            session.commitCameraRawGeometryGuide()
+        }
+        session.filterEdit?.cameraRawDrag = nil
         if textBoxAnchor != nil { finishTextGesture(); return }
         stopMarqueeAutoscroll()
         if let drag = zoomDrag {
@@ -1645,8 +1998,10 @@ final class CanvasView: NSView {
         lastDragPoint = nil
         // Leaving mid-drag keeps the drag's cursor, so a drag released outside the canvas (over
         // the Layers panel, say) must put the arrow back itself.
-        if !visibleRect.contains(convert(event.locationInWindow, from: nil)) { NSCursor.arrow.set() }
-        window?.invalidateCursorRects(for: self)
+        if session.document != nil {
+            if !visibleRect.contains(convert(event.locationInWindow, from: nil)) { NSCursor.arrow.set() }
+            window?.invalidateCursorRects(for: self)
+        }
     }
     override func scrollWheel(with event: NSEvent) {
         guard transformDrag == nil, cropDrag == nil, !guideDragging, session.brushStroke == nil, session.warpStroke == nil else { return }
@@ -1669,6 +2024,7 @@ final class CanvasView: NSView {
     override func keyDown(with event: NSEvent) {
         let physicalKey = event.keyCode
         guard let event = ShortcutSettings.shared.canvasEvent(event) else { return }
+        if handleKeyboardZoom(event) { return }
         if event.keyCode == 53, textBoxAnchor != nil { textBoxAnchor = nil; textBoxRect = nil; needsDisplay = true; return }
         if event.keyCode == 53, session.textDraft != nil { session.cancelText(); return }
         // A drag session swallows the flagsChanged that says Option was let go, which left the canvas thinking it
@@ -1856,8 +2212,15 @@ final class CanvasView: NSView {
         guard let start = selectionDragStart, let document = session.document else { return }
         let pixel = session.viewport.documentPoint(from: point, documentSize: document.size)
         var offset = CGSize(width: pixel.x - start.x, height: pixel.y - start.y)
+        var horizontal = true, vertical = true
         if flags.contains(.shift) {
-            if abs(offset.width) >= abs(offset.height) { offset.height = 0 } else { offset.width = 0 }
+            if abs(offset.width) >= abs(offset.height) { offset.height = 0; vertical = false } else { offset.width = 0; horizontal = false }
+        }
+        // Snaps to View > Snap To targets as a drawn Marquee does, unless Control is held.
+        if flags.contains(.control) { session.snapGuides = ([], []) }
+        else {
+            offset = session.snappedSelectionOffset(offset, tolerance: TransformSnap.distance / max(session.viewport.pointsPerPixel, 0.0001),
+                                                    horizontal: horizontal, vertical: vertical)
         }
         session.moveSelection(by: offset)
     }
@@ -1870,10 +2233,16 @@ final class CanvasView: NSView {
     /// Reshapes the Marquee draft. Option subtracts (chosen at the press), so it never draws from the
     /// center. Shift squares the box — except a Shift already held when the drag began, which chose Add,
     /// until it has been let go and pressed again, as in Photoshop.
+    /// A Marquee or shape corner at `pixel` (document pixels), snapped to View > Snap To targets unless Control is held.
+    private func snappedCorner(_ pixel: CGPoint, flags: NSEvent.ModifierFlags) -> CGPoint {
+        guard !flags.contains(.control) else { session.snapGuides = ([], []); return pixel }
+        return session.snappedPoint(pixel, tolerance: TransformSnap.distance / max(session.viewport.pointsPerPixel, 0.0001))
+    }
+
     private func dragMarqueeDraft(to pixel: CGPoint, flags: NSEvent.ModifierFlags) {
         if !flags.contains(.shift) { marqueeConstrainArmed = true }
         marqueeDragPixel = pixel
-        session.dragMarquee(to: pixel, square: marqueeConstrainArmed && flags.contains(.shift), fromCenter: false)
+        session.dragMarquee(to: snappedCorner(pixel, flags: flags), square: marqueeConstrainArmed && flags.contains(.shift), fromCenter: false)
     }
 
     /// Freehand starts an outline to drag. Polygonal adds a corner per click and closes on
@@ -1909,7 +2278,7 @@ final class CanvasView: NSView {
                 Task { await session.magicWand(at: pixel, mode: mode); synchronizeDisplay(); refreshLassoCursor() }
                 return
             }
-            session.beginLasso(at: pixel, mode: mode)
+            session.beginLasso(at: session.tool == .marquee ? snappedCorner(pixel, flags: event.modifierFlags) : pixel, mode: mode)
             synchronizeDisplay()
             return
         }
@@ -1927,7 +2296,8 @@ final class CanvasView: NSView {
         let active = session.selection?.isEmpty == false && window != nil
         if active, antsTimer == nil {
             let timer = Timer(timeInterval: 0.12, repeats: true) { [weak self] _ in
-                guard let self else { return }
+                // A redraw still pending skips this tick: a slow outline stutters rather than queuing redraws forever.
+                guard let self, !self.transformOverlay.needsDisplay else { return }
                 self.transformOverlay.antsPhase = (self.transformOverlay.antsPhase + 1).truncatingRemainder(dividingBy: 8)
                 self.transformOverlay.needsDisplay = true
             }
@@ -2019,6 +2389,21 @@ final class CanvasView: NSView {
         cursorLockWindow = window
         cursorLockWindow?.disableCursorRects()
         dragCursor?.set()
+        return true
+    }
+
+    /// Double-click with the Move tool: open the Type editor on the topmost live text under the pointer.
+    private func beginLiveTextEdit(at point: CGPoint) -> Bool {
+        guard let document = session.document, session.canEditLayers else { return false }
+        let pixel = session.viewport.documentPoint(from: point, documentSize: document.size)
+        let visible = document.effectiveVisibleIDs
+        guard let layer = document.layers.reversed().first(where: {
+            visible.contains($0.id) && $0.liveText != nil && $0.transform.contains(pixel)
+        }) else { return false }
+        session.commitTransform()
+        session.selectLayer(layer.id)
+        session.editActiveText()
+        synchronizeInlineText()
         return true
     }
 

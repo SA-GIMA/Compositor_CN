@@ -7,7 +7,7 @@ nonisolated enum ExportError: LocalizedError {
     case tooLarge, render, encode
     var errorDescription: String? {
         switch self {
-        case .tooLarge: "图像导出支持最大 1 亿像素、每边不超过 30,000 像素的画布。"
+        case .tooLarge: "Image export supports canvases up to \(DocumentLimits.maxSurfaceMegapixels) megapixels and \(DocumentLimits.maxSide.formatted()) pixels per side."
         case .render: "无法渲染画布。请尝试更小的画布。"
         case .encode: "无法编码该图像。"
         }
@@ -19,8 +19,8 @@ actor ImageExporter {
 
     func render(_ snapshot: ProjectSnapshot) throws -> ExportRaster {
         let width = snapshot.manifest.width, height = snapshot.manifest.height
-        guard (1...30_000).contains(width), (1...30_000).contains(height),
-              width * height <= 100_000_000 else { throw ExportError.tooLarge }
+        guard (1...DocumentLimits.maxSide).contains(width), (1...DocumentLimits.maxSide).contains(height),
+              width * height <= DocumentLimits.maxSurfacePixels else { throw ExportError.tooLarge }
         return try autoreleasepool {
             guard let space = CGColorSpace(name: CGColorSpace.sRGB),
                   let context = CGContext(data: nil, width: width, height: height,
@@ -75,6 +75,32 @@ actor ImageExporter {
         }
     }
 
+    /// The Space-bar preview, saved in the project's QuickLook folder: the flattened image on white, a JPEG up to
+    /// 1,024 px on the long side, about 100–200 KB. Nil for canvases too large to flatten on every save.
+    func quickLookImages(_ snapshot: ProjectSnapshot) -> QuickLookImages? {
+        guard snapshot.manifest.width * snapshot.manifest.height <= 50_000_000,
+              let raster = try? render(snapshot),
+              let preview = try? scaledJPEG(raster.image, longSide: 1024) else { return nil }
+        return QuickLookImages(preview: preview)
+    }
+
+    private func scaledJPEG(_ image: CGImage, longSide: CGFloat) throws -> Data {
+        let scale = min(1, longSide / CGFloat(max(image.width, image.height)))
+        let width = max(1, Int((CGFloat(image.width) * scale).rounded())), height = max(1, Int((CGFloat(image.height) * scale).rounded()))
+        return try autoreleasepool {
+            guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            else { throw ExportError.render }
+            let bounds = CGRect(x: 0, y: 0, width: width, height: height)
+            context.setFillColor(gray: 1, alpha: 1)
+            context.fill(bounds)
+            context.interpolationQuality = .high
+            context.draw(image, in: bounds)
+            guard let flattened = context.makeImage() else { throw ExportError.render }
+            return try encode(flattened, type: .jpeg, properties: [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
+        }
+    }
+
     func pngData(_ snapshot: ProjectSnapshot) throws -> Data {
         let raster = try render(snapshot)
         return try encode(raster.image, type: .png, properties: [
@@ -115,7 +141,9 @@ actor ImageExporter {
             guard let source = CGImageSourceCreateWithData(data as CFData, nil),
                   let preview = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                     kCGImageSourceCreateThumbnailFromImageAlways: true,
-                    kCGImageSourceThumbnailMaxPixelSize: 1000,
+                    // Full size, so the dialog's 100% view shows the real artifacts; capped to keep memory in bounds.
+                    kCGImageSourceThumbnailMaxPixelSize: min(max(image.width, image.height), 8192),
+                    kCGImageSourceShouldCacheImmediately: true,
                     kCGImageSourceCreateThumbnailWithTransform: true
                   ] as CFDictionary) else { throw ExportError.encode }
             return JPEGResult(data: data, preview: preview)
@@ -138,6 +166,9 @@ actor ImageExporter {
     }
 }
 
+nonisolated struct QuickLookImages: Sendable {
+    let preview: Data
+}
 nonisolated struct ExportRaster: @unchecked Sendable {
     let image: CGImage
     var resolution: Double = 72

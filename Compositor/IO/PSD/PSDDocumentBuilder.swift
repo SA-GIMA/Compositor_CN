@@ -25,9 +25,19 @@ nonisolated enum PSDDocumentBuilder {
         var layers: [ImageLayer] = []
         let canvas = CGSize(width: document.width, height: document.height)
         for record in document.layers {
+            if record.croppedToCanvas {
+                conversions.append(PSDConversion(layerName: record.name,
+                                                 message: "Cropped to the canvas so the file fits in memory. Pixels outside the canvas weren't imported."))
+            }
+            let renderedText = record.text.flatMap { try? PSDText.render($0) }
             var notes: [String] = []
             if record.kind == .text {
-                notes.append("Editable Photoshop text becomes pixels and can’t be retyped.")
+                if let source = record.text, renderedText != nil {
+                    notes.append(contentsOf: source.notes)
+                    if let missing = PSDText.missingFontNote(source.style.fontName) { notes.append(missing) }
+                } else {
+                    notes.append(PSDText.rasterizedNote)
+                }
             }
             if record.kind == .smartObject {
                 notes.append("The smart object was rasterized. Linked contents can’t be edited.")
@@ -75,6 +85,13 @@ nonisolated enum PSDDocumentBuilder {
                                    transform: LayerTransform(origin: .zero, size: canvas), parentID: record.parentID,
                                    opacity: min(1, max(0, record.opacity)),
                                    blendMode: record.blendMode ?? .normal, adjustment: adjustment)
+            } else if let rendered = renderedText, let source = record.text {
+                let asset = try imported(rendered.image, name: record.name)
+                layer = ImageLayer(id: record.id, asset: asset, name: record.name, isVisible: record.isVisible,
+                                   transform: rendered.transform, parentID: record.parentID,
+                                   opacity: min(1, max(0, record.opacity)),
+                                   blendMode: record.blendMode ?? .normal,
+                                   text: LayerText(style: source.style, image: rendered.image))
             } else if let image = record.image {
                 let asset = try assets[record.id] ?? imported(image, name: record.name)
                 let origin = CGPoint(x: record.bounds.minX, y: record.bounds.minY)

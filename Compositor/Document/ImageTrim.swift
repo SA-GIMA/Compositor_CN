@@ -9,6 +9,17 @@ public enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 }
 
+extension TrimBasedOn {
+    nonisolated var displayName: String {
+        switch self {
+        case .transparentPixels: "透明像素"
+        case .topLeftPixelColor: "左上角像素颜色"
+        case .bottomRightPixelColor: "右下角像素颜色"
+        }
+    }
+}
+
+
 nonisolated public struct TrimOptions: Sendable, Equatable {
     public var basedOn: TrimBasedOn
     public var top: Bool
@@ -204,17 +215,7 @@ extension EditorSession {
         guard let trimmedSnapshot = try await ImageTrim.trim(snapshot, options: options) else {
             return false
         }
-        applyDocumentSize(trimmedSnapshot, actionName: "Trim")
+        applyDocumentSize(trimmedSnapshot, actionName: "裁切")
         return true
-    }
-}
-
-extension TrimBasedOn {
-    nonisolated var displayName: String {
-        switch self {
-        case .transparentPixels: "透明像素"
-        case .topLeftPixelColor: "左上角像素颜色"
-        case .bottomRightPixelColor: "右下角像素颜色"
-        }
     }
 }

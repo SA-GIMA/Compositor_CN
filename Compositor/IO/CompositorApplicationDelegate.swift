@@ -48,8 +48,9 @@ final class CompositorApplicationDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let textEditing = workspace.quitOrder.contains { $0.session.textDraft != nil }
-        guard workspace.canSwitch || textEditing else { return .terminateCancel }
+        // What's still open (a dialog, a gradient waiting for Apply) is settled by confirmQuit, which beeps if
+        // something, a save still running say, has to finish first.
+        guard !workspace.isManaging else { return .terminateCancel }
         Task { sender.reply(toApplicationShouldTerminate: await workspace.confirmQuit()) }
         return .terminateLater
     }

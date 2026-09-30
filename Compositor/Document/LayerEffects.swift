@@ -210,23 +210,8 @@ nonisolated struct LayerEffects: Codable, Equatable, Sendable {
 }
 
 nonisolated enum LayerEffectKind: String, CaseIterable, Sendable {
-    case stroke = "Stroke", shadow = "Drop Shadow", colorOverlay = "Color Overlay", innerShadow = "Inner Shadow", outerGlow = "Outer Glow", innerGlow = "Inner Glow"
+    case stroke = "Stroke", shadow = "Drop Shadow", colorOverlay = "Color Overlay", innerShadow = "Inner Shadow", outerGlow = "Outer Glow", innerGlow = "内发光"
 }
-
-extension LayerEffectKind {
-    nonisolated var displayName: String {
-        switch self {
-        case .stroke: "描边"
-        case .shadow: "投影"
-        case .colorOverlay: "颜色叠加"
-        case .innerShadow: "内阴影"
-        case .outerGlow: "外发光"
-        case .innerGlow: "内发光"
-        }
-    }
-}
-
-
 struct LayerEffectSelection: Equatable {
     let layerID: UUID
     let kind: LayerEffectKind
@@ -648,5 +633,18 @@ nonisolated enum LayerEffectsRenderer {
         // and their effects line up instead of mirroring the coverage vertically.
         BrushRaster.fill(CGColor(srgbRed: color.red, green: color.green, blue: color.blue, alpha: 1),
                          coverage: coverage, in: rect, alpha: CGFloat(alpha), context: context)
+    }
+}
+
+extension LayerEffectKind {
+    nonisolated var displayName: String {
+        switch self {
+        case .stroke: "描边"
+        case .shadow: "投影"
+        case .colorOverlay: "颜色叠加"
+        case .innerShadow: "内阴影"
+        case .outerGlow: "外发光"
+        case .innerGlow: "内发光"
+        }
     }
 }

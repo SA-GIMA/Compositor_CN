@@ -14,32 +14,12 @@
       "\"显示变换控件\""
     ],
     [
-      "\"Snap\"",
-      "\"对齐\""
-    ],
-    [
       "Menu(\"Show\")",
       "Menu(\"显示\")"
     ],
     [
-      "\"Grid\"",
-      "\"网格\""
-    ],
-    [
-      "\"Guides\"",
-      "\"参考线\""
-    ],
-    [
-      "\"Rulers\"",
-      "\"标尺\""
-    ],
-    [
       "Menu(\"Snap To\")",
       "Menu(\"对齐到\")"
-    ],
-    [
-      "\"Layers\"",
-      "\"图层\""
     ],
     [
       "\"Document Bounds\"",
@@ -922,48 +902,8 @@
       "\"在新图层上拖动绘制形状 · Shift \""
     ],
     [
-      "\"Pan\"",
-      "\"抓手\""
-    ],
-    [
-      "\"Zoom\"",
-      "\"缩放\""
-    ],
-    [
-      "\"Crop\"",
-      "\"裁剪\""
-    ],
-    [
-      "\"Ratio\"",
-      "\"比例\""
-    ],
-    [
-      "\"Quality\"",
-      "\"质量\""
-    ],
-    [
       "\"Distribution\"",
       "\"分布\""
-    ],
-    [
-      "\"Position\"",
-      "\"位置\""
-    ],
-    [
-      "\"Range\"",
-      "\"范围\""
-    ],
-    [
-      "\"Hex\"",
-      "\"十六进制\""
-    ],
-    [
-      "\"Amount\"",
-      "\"数量\""
-    ],
-    [
-      "\"Channel\"",
-      "\"通道\""
     ],
     [
       "control(\"Feather\"",
@@ -988,22 +928,6 @@
     [
       ".help(\"Feather\")",
       ".help(\"羽化\")"
-    ],
-    [
-      "\"Deselect\"",
-      "\"取消选择\""
-    ],
-    [
-      "\"Inverse\"",
-      "\"反选\""
-    ],
-    [
-      "\"Clear\"",
-      "\"清除\""
-    ],
-    [
-      "\"Font\"",
-      "\"字体\""
     ],
     [
       "Label(\"New\", systemImage: \"plus\")",
@@ -1992,6 +1916,370 @@
     [
       "Text(\"No lens metadata on this layer. Profile sliders set generic correction strength.\")",
       "Text(\"此图层没有镜头元数据。配置文件滑块设置通用校正强度。\")"
+    ],
+    [
+      "\"New Canvas\"",
+      "\"新建画布\""
+    ],
+    [
+      "\"Open Project\"",
+      "\"打开项目\""
+    ],
+    [
+      "\"Save As\"",
+      "\"存储为\""
+    ],
+    [
+      "\"Export PNG\"",
+      "\"导出 PNG\""
+    ],
+    [
+      "\"Export JPEG\"",
+      "\"导出 JPEG\""
+    ],
+    [
+      "\"Close Project\"",
+      "\"关闭项目\""
+    ],
+    [
+      "\"Fit Canvas\"",
+      "\"适合画布\""
+    ],
+    [
+      "\"Actual Pixels\"",
+      "\"实际像素\""
+    ],
+    [
+      "\"Zoom In\"",
+      "\"放大\""
+    ],
+    [
+      "\"Zoom Out\"",
+      "\"缩小\""
+    ],
+    [
+      "\"Fill with Foreground\"",
+      "\"填充前景色\""
+    ],
+    [
+      "\"Fill with Background\"",
+      "\"填充背景色\""
+    ],
+    [
+      "\"Select All\"",
+      "\"全部\""
+    ],
+    [
+      "\"Inverse Selection\"",
+      "\"反选\""
+    ],
+    [
+      "\"Select Subject\"",
+      "\"主体\""
+    ],
+    [
+      "\"Invert Pixels / Mask\"",
+      "\"反相像素/蒙版\""
+    ],
+    [
+      "\"Canvas Size\"",
+      "\"画布大小\""
+    ],
+    [
+      "\"Image Size\"",
+      "\"图像大小\""
+    ],
+    [
+      "\"Transform Layer / Selection\"",
+      "\"变换图层/选区\""
+    ],
+    [
+      "\"Duplicate / Layer via Copy\"",
+      "\"复制/通过拷贝的图层\""
+    ],
+    [
+      "\"Toggle Clipping Mask\"",
+      "\"创建/释放剪贴蒙版\""
+    ],
+    [
+      "\"Group Layers\"",
+      "\"编组所选图层\""
+    ],
+    [
+      "\"Ungroup Layers\"",
+      "\"取消编组\""
+    ],
+    [
+      "\"Merge Layers\"",
+      "\"合并图层\""
+    ],
+    [
+      "\"Show Grid\"",
+      "\"显示网格\""
+    ],
+    [
+      "\"Show Guides\"",
+      "\"显示参考线\""
+    ],
+    [
+      "\"Show Rulers\"",
+      "\"显示标尺\""
+    ],
+    [
+      "\"Delete Mask\"",
+      "\"删除蒙版\""
+    ],
+    [
+      "\"Delete Selected Layers\"",
+      "\"删除所选图层\""
+    ],
+    [
+      "\"Delete Layer\"",
+      "\"删除图层\""
+    ],
+    [
+      "\"Add Mask\"",
+      "\"添加蒙版\""
+    ],
+    [
+      "\"Keep Mine\"",
+      "\"保留我的\""
+    ],
+    [
+      "\"Reveal Selection\"",
+      "\"显示选区\""
+    ],
+    [
+      "\"Hide Selection\"",
+      "\"隐藏选区\""
+    ],
+    [
+      "\"Canvas & Layers\"",
+      "\"画布与图层\""
+    ],
+    [
+      "\"Text Editing\"",
+      "\"文字编辑\""
+    ],
+    [
+      "\"Select tool\"",
+      "\"选框工具\""
+    ],
+    [
+      "\"Move / Transform tool\"",
+      "\"移动/变换工具\""
+    ],
+    [
+      "\"Hand tool\"",
+      "\"抓手工具\""
+    ],
+    [
+      "\"Zoom tool\"",
+      "\"缩放工具\""
+    ],
+    [
+      "\"Brush tool\"",
+      "\"画笔工具\""
+    ],
+    [
+      "\"Spot Healing\"",
+      "\"污点修复\""
+    ],
+    [
+      "\"Clone Stamp\"",
+      "\"仿制图章\""
+    ],
+    [
+      "\"Type tool\"",
+      "\"文字工具\""
+    ],
+    [
+      "\"Gradient tool\"",
+      "\"渐变工具\""
+    ],
+    [
+      "\"Shape tool\"",
+      "\"形状工具\""
+    ],
+    [
+      "\"Eyedropper tool\"",
+      "\"吸管工具\""
+    ],
+    [
+      "\"Marquee / cycle shape\"",
+      "\"选框/切换形状\""
+    ],
+    [
+      "\"Lasso / cycle mode\"",
+      "\"套索/切换模式\""
+    ],
+    [
+      "\"Blur / Smudge / Liquify\"",
+      "\"模糊/涂抹/液化\""
+    ],
+    [
+      "\"Crop tool\"",
+      "\"裁剪工具\""
+    ],
+    [
+      "\"Swap foreground/background\"",
+      "\"切换前景色/背景色\""
+    ],
+    [
+      "\"Reset colors\"",
+      "\"恢复默认颜色\""
+    ],
+    [
+      "\"Cycle tool mode\"",
+      "\"切换工具模式\""
+    ],
+    [
+      "\"Temporary Hand tool (hold)\"",
+      "\"临时抓手工具（按住）\""
+    ],
+    [
+      "\"Delete selection / layer / effect / lasso point\"",
+      "\"删除选区/图层/效果/套索点\""
+    ],
+    [
+      "\"Apply current canvas operation\"",
+      "\"应用当前画布操作\""
+    ],
+    [
+      "\"Cancel current canvas operation\"",
+      "\"取消当前画布操作\""
+    ],
+    [
+      "\"Decrease brush size\"",
+      "\"减小画笔大小\""
+    ],
+    [
+      "\"Increase brush size\"",
+      "\"增大画笔大小\""
+    ],
+    [
+      "\"Decrease brush hardness\"",
+      "\"减小画笔硬度\""
+    ],
+    [
+      "\"Increase brush hardness\"",
+      "\"增大画笔硬度\""
+    ],
+    [
+      "\"Previous blend mode\"",
+      "\"上一个混合模式\""
+    ],
+    [
+      "\"Next blend mode\"",
+      "\"下一个混合模式\""
+    ],
+    [
+      "\"Cycle shape kind\"",
+      "\"切换形状类型\""
+    ],
+    [
+      "\"Toggle Levels preview\"",
+      "\"切换色阶预览\""
+    ],
+    [
+      "\"Decrease tracking\"",
+      "\"减小字距\""
+    ],
+    [
+      "\"Increase tracking\"",
+      "\"增大字距\""
+    ],
+    [
+      "\"Decrease leading\"",
+      "\"减小行距\""
+    ],
+    [
+      "\"Increase leading\"",
+      "\"增大行距\""
+    ],
+    [
+      "\"RGB histogram\"",
+      "\"RGB 直方图\""
+    ],
+    [
+      "\"Shadow Clipping Indicator\"",
+      "\"阴影修剪指示\""
+    ],
+    [
+      "\"Highlight Clipping Indicator\"",
+      "\"高光修剪指示\""
+    ],
+    [
+      "\"How far the blur softens, in pixels\"",
+      "\"模糊柔化范围（像素）\""
+    ],
+    [
+      "\"How far apart the screen's lines are\"",
+      "\"屏幕扫描线间距\""
+    ],
+    [
+      "\"Light blooming around the lines, like a CRT's phosphors\"",
+      "\"扫描线周围的辉光，类似 CRT 荧光粉\""
+    ],
+    [
+      "\"Break the lines into glowing beads\"",
+      "\"把扫描线打散成发光珠点\""
+    ],
+    [
+      "\"Make the lines waver sideways down the screen, like a CRT losing sync\"",
+      "\"让扫描线横向抖动，如同 CRT 失步\""
+    ],
+    [
+      "\"Choose the dark color\"",
+      "\"选择深色\""
+    ],
+    [
+      "\"Choose the light color\"",
+      "\"选择浅色\""
+    ],
+    [
+      "\"Drag on the picture to move the curve for the tone under the pointer.\"",
+      "\"在图像上拖动以调整指针下色调对应的曲线点。\""
+    ],
+    [
+      "\"Show clipped shadows in blue on the preview.\"",
+      "\"在预览中用蓝色显示修剪的阴影。\""
+    ],
+    [
+      "\"Show clipped highlights in red on the preview.\"",
+      "\"在预览中用红色显示修剪的高光。\""
+    ],
+    [
+      "\"Select layers by clicking the canvas. Hold Command to turn it the other way while you click.\"",
+      "\"点击画布选择图层。按住 Command 点击可反向选择。\""
+    ],
+    [
+      "\"Lock aspect ratio. Hold Shift while dragging a handle to turn it the other way.\"",
+      "\"锁定宽高比。拖动手柄时按住 Shift 可反向。\""
+    ],
+    [
+      "\"Add layer mask (Option-click for a black mask)\"",
+      "\"添加图层蒙版（Option 点击添加黑色蒙版）\""
+    ],
+    [
+      "\"Layer Mask\"",
+      "\"图层蒙版\""
+    ],
+    [
+      "\"Show the image again (or Option-click the mask thumbnail)\"",
+      "\"重新显示图像（或 Option 点击蒙版缩略图）\""
+    ],
+    [
+      "\"Another app changed this project. You can revert to the version on disk, losing your unsaved changes, or keep the version open here.\"",
+      "\"其他应用更改了此项目。你可以还原为磁盘上的版本（放弃未保存更改），或保留当前打开的版本。\""
+    ],
+    [
+      "\"Bake keeps the current masked appearance in the dependent layers’ pixels. Remove Links reveals their full, unmasked pixels again.\"",
+      "\"「烘焙」将当前蒙版效果写入依赖图层像素。「移除链接」会重新显示完整未蒙版像素。\""
+    ],
+    [
+      "\"Image export supports canvases up to",
+      "\"图像导出最大支持"
     ]
   ]
 }

@@ -42,7 +42,7 @@ struct ShortcutChord: Codable, Equatable, Hashable {
         return flags
     }
     var label: String {
-        let special = ["\u{7f}": "Delete", "\r": "Return", "\u{1b}": "Esc", "\t": "Tab", " ": "Space",
+        let special = ["\u{7f}": "Delete", "\r": "Return", "\u{1b}": "Esc", "\t": "Tab", " ": "空格",
                        "\u{f702}": "←", "\u{f703}": "→", "\u{f701}": "↓", "\u{f700}": "↑"]
         return (modifiers & 4 != 0 ? "⌃" : "") + (modifiers & 2 != 0 ? "⌥" : "")
             + (modifiers & 8 != 0 ? "⇧" : "") + (modifiers & 1 != 0 ? "⌘" : "")
@@ -65,63 +65,64 @@ struct ShortcutDefinition: Identifiable {
     let group: String
     let original: ShortcutChord
     var id: String { "\(group):\(title)" }
-    var isMenu: Bool { group == "Menus" }
+    var isMenu: Bool { group == "菜单" }
 
     static let all: [ShortcutDefinition] = {
         func entry(_ title: String, _ key: String, _ modifiers: Int = 0, menu: Bool = false) -> ShortcutDefinition {
-            .init(title: title, group: menu ? "Menus" : "Canvas & Layers", original: ShortcutChord(key, modifiers))
+            .init(title: title, group: menu ? "菜单" : "画布与图层", original: ShortcutChord(key, modifiers))
         }
         var result: [ShortcutDefinition] = [
-            entry("Undo", "z", 1, menu: true), entry("Redo", "z", 9, menu: true),
-            entry("New Canvas", "n", 1, menu: true), entry("Open Project", "o", 1, menu: true),
-            entry("Save", "s", 1, menu: true), entry("Save As", "s", 9, menu: true),
-            entry("Export PNG", "e", 9, menu: true), entry("Export JPEG", "s", 11, menu: true),
-            entry("Close Project", "w", 1, menu: true), entry("Fit Canvas", "0", 1, menu: true),
-            entry("Actual Pixels", "1", 1, menu: true), entry("Zoom In", "=", 1, menu: true),
-            entry("Zoom Out", "-", 1, menu: true), entry("显示变换控件", "h", 1, menu: true),
-            entry("隐藏 Compositor", "h", 3, menu: true), entry("Cut", "x", 1, menu: true),
-            entry("Copy", "c", 1, menu: true), entry("合并拷贝", "c", 9, menu: true),
-            entry("Paste", "v", 1, menu: true), entry("Fill with Foreground", "\u{7f}", 2, menu: true),
-            entry("Fill with Background", "\u{7f}", 1, menu: true), entry("Content-Aware Fill", "\u{7f}", 8, menu: true),
-            entry("Select All", "a", 1, menu: true), entry("取消选择", "d", 1, menu: true),
-            entry("Inverse Selection", "i", 9, menu: true), entry("Select Subject", "a", 3, menu: true),
-            entry("Curves", "m", 1, menu: true), entry("Levels", "l", 1, menu: true),
-            entry("Hue/Saturation", "u", 1, menu: true), entry("Invert Pixels / Mask", "i", 1, menu: true),
-            entry("Canvas Size", "c", 3, menu: true), entry("Image Size", "i", 3, menu: true),
-            entry("Transform Layer / Selection", "t", 1, menu: true), entry("Duplicate / Layer via Copy", "j", 1, menu: true),
-            entry("Toggle Clipping Mask", "g", 3, menu: true), entry("Group Layers", "g", 1, menu: true),
+            entry("撤销", "z", 1, menu: true), entry("重做", "z", 9, menu: true),
+            entry("新建画布", "n", 1, menu: true), entry("打开项目", "o", 1, menu: true),
+            entry("存储", "s", 1, menu: true), entry("存储为", "s", 9, menu: true),
+            entry("导出 PNG", "e", 9, menu: true), entry("导出 JPEG", "s", 11, menu: true),
+            entry("关闭项目", "w", 1, menu: true), entry("适合画布", "0", 1, menu: true),
+            entry("实际像素", "1", 1, menu: true), entry("放大", "=", 1, menu: true),
+            entry("缩小", "-", 1, menu: true), entry("显示变换控件", "h", 1, menu: true),
+            entry("隐藏 Compositor", "h", 3, menu: true), entry("剪切", "x", 1, menu: true),
+            entry("拷贝", "c", 1, menu: true), entry("合并拷贝", "c", 9, menu: true),
+            entry("粘贴", "v", 1, menu: true), entry("填充前景色", "\u{7f}", 2, menu: true),
+            entry("填充背景色", "\u{7f}", 1, menu: true), entry("内容识别填充", "\u{7f}", 8, menu: true),
+            entry("全部", "a", 1, menu: true), entry("取消选择", "d", 1, menu: true),
+            entry("反选", "i", 9, menu: true), entry("主体", "a", 3, menu: true),
+            entry("曲线", "m", 1, menu: true), entry("色阶", "l", 1, menu: true),
+            entry("色相/饱和度", "u", 1, menu: true), entry("反相像素/蒙版", "i", 1, menu: true),
+            entry("画布大小", "c", 3, menu: true), entry("图像大小", "i", 3, menu: true),
+            entry("变换图层/选区", "t", 1, menu: true), entry("复制/通过拷贝的图层", "j", 1, menu: true),
+            entry("创建/释放剪贴蒙版", "g", 3, menu: true), entry("编组所选图层", "g", 1, menu: true),
+            entry("取消编组", "g", 9, menu: true),
             entry("新建空白图层", "n", 9, menu: true), entry("上移图层", "]", 1, menu: true),
-            entry("下移图层", "[", 1, menu: true), entry("Merge Layers", "e", 1, menu: true),
-            entry("Show Grid", "'", 1, menu: true), entry("Show Guides", ";", 1, menu: true),
-            entry("Show Rulers", "r", 1, menu: true), entry("对齐", ";", 9, menu: true),
+            entry("下移图层", "[", 1, menu: true), entry("合并图层", "e", 1, menu: true),
+            entry("显示网格", "'", 1, menu: true), entry("显示参考线", ";", 1, menu: true),
+            entry("显示标尺", "r", 1, menu: true), entry("对齐", ";", 9, menu: true),
             entry("锁定参考线", ";", 3, menu: true)
         ]
-        for (title, key) in [("Select tool", "a"), ("Move / Transform tool", "v"), ("Hand tool", "h"),
-            ("Zoom tool", "z"), ("Brush tool", "b"), ("Eraser", "e"), ("Spot Healing", "j"),
-            ("Clone Stamp", "s"), ("Type tool", "t"), ("Gradient tool", "g"), ("Shape tool", "u"),
-            ("Eyedropper tool", "i"), ("Marquee / cycle shape", "m"), ("Magic", "w"),
-            ("Lasso / cycle mode", "l"), ("Blur / Smudge / Liquify", "r"), ("Crop tool", "c"),
-            ("Swap foreground/background", "x"), ("Reset colors", "d"), ("Cycle tool mode", "\t"),
-            ("Temporary Hand tool (hold)", " "), ("Delete selection / layer / effect / lasso point", "\u{7f}"),
-            ("Apply current canvas operation", "\r"), ("Cancel current canvas operation", "\u{1b}"),
-            ("Decrease brush size", "["), ("Increase brush size", "]")] {
+        for (title, key) in [("选框工具", "a"), ("移动/变换工具", "v"), ("抓手工具", "h"),
+            ("缩放工具", "z"), ("画笔工具", "b"), ("橡皮擦", "e"), ("污点修复", "j"),
+            ("仿制图章", "s"), ("文字工具", "t"), ("渐变工具", "g"), ("形状工具", "u"),
+            ("吸管工具", "i"), ("选框/切换形状", "m"), ("魔棒", "w"),
+            ("套索/切换模式", "l"), ("模糊/涂抹/液化", "r"), ("裁剪工具", "c"),
+            ("切换前景色/背景色", "x"), ("恢复默认颜色", "d"), ("切换工具模式", "\t"),
+            ("临时抓手工具（按住）", " "), ("删除选区/图层/效果/套索点", "\u{7f}"),
+            ("应用当前画布操作", "\r"), ("取消当前画布操作", "\u{1b}"),
+            ("减小画笔大小", "["), ("增大画笔大小", "]")] {
             result.append(entry(title, key))
         }
-        result += [entry("Decrease brush hardness", "[", 8), entry("Increase brush hardness", "]", 8),
-                   entry("Previous blend mode", "-", 8), entry("Next blend mode", "=", 8),
-                   entry("Cycle shape kind", "u", 8)]
-        for digit in 0...9 { result.append(entry("Opacity digit \(digit) (type two for exact %)", String(digit))) }
-        for (direction, key) in [("Left", "\u{f702}"), ("Right", "\u{f703}"), ("Up", "\u{f700}"), ("Down", "\u{f701}")] {
-            result += [entry("Nudge \(direction) 1 px", key), entry("Nudge \(direction) 10 px", key, 8),
-                       entry("Move selected pixels \(direction) 1 px", key, 1), entry("Move selected pixels \(direction) 10 px", key, 9)]
+        result += [entry("减小画笔硬度", "[", 8), entry("增大画笔硬度", "]", 8),
+                   entry("上一个混合模式", "-", 8), entry("下一个混合模式", "=", 8),
+                   entry("切换形状类型", "u", 8)]
+        for digit in 0...9 { result.append(entry("不透明度数字 \(digit)（连按两位精确到 %）", String(digit))) }
+        for (direction, key) in [("左", "\u{f702}"), ("右", "\u{f703}"), ("上", "\u{f700}"), ("下", "\u{f701}")] {
+            result += [entry("微移\(direction) 1 像素", key), entry("微移\(direction) 10 像素", key, 8),
+                       entry("移动选中像素\(direction) 1 像素", key, 1), entry("移动选中像素\(direction) 10 像素", key, 9)]
         }
-        result.append(.init(title: "完成文字编辑", group: "Text Editing", original: ShortcutChord("\r", 1)))
-        for (title, key) in [("Decrease tracking", "\u{f702}"), ("Increase tracking", "\u{f703}"),
-                             ("Decrease leading", "\u{f700}"), ("Increase leading", "\u{f701}")] {
-            result.append(.init(title: title, group: "Text Editing", original: ShortcutChord(key, 2)))
-            result.append(.init(title: title + " by 10", group: "Text Editing", original: ShortcutChord(key, 10)))
+        result.append(.init(title: "完成文字编辑", group: "文字编辑", original: ShortcutChord("\r", 1)))
+        for (title, key) in [("减小字距", "\u{f702}"), ("增大字距", "\u{f703}"),
+                             ("减小行距", "\u{f700}"), ("增大行距", "\u{f701}")] {
+            result.append(.init(title: title, group: "文字编辑", original: ShortcutChord(key, 2)))
+            result.append(.init(title: title + "（×10）", group: "文字编辑", original: ShortcutChord(key, 10)))
         }
-        result.append(entry("Toggle Levels preview", "p", 2))
+        result.append(entry("切换色阶预览", "p", 2))
         return result
     }()
 }
@@ -167,7 +168,7 @@ final class ShortcutSettings {
         for definition in ShortcutDefinition.all {
             let chord = values[definition.id] ?? definition.original
             guard chord.key.count == 1, (0...15).contains(chord.modifiers) else { return "请选择单个按键，并可搭配修饰键。" }
-            if definition.group == "Text Editing", chord.modifiers & 7 == 0 {
+            if definition.group == "文字编辑", chord.modifiers & 7 == 0 {
                 return "文本编辑快捷键需要 Command、Option 或 Control，以免替换正常输入。"
             }
             if [ShortcutChord("q", 1), ShortcutChord(",", 1), ShortcutChord("m", 3)].contains(chord) {
@@ -184,10 +185,10 @@ final class ShortcutSettings {
     func canvasEvent(_ event: NSEvent) -> NSEvent? {
         guard !overrides.isEmpty else { return event }
         let input = ShortcutChord(event)
-        if let definition = ShortcutDefinition.all.first(where: { $0.group == "Canvas & Layers" && chord($0) == input }) {
+        if let definition = ShortcutDefinition.all.first(where: { $0.group == "画布与图层" && chord($0) == input }) {
             return definition.original == input ? event : definition.original.event(like: event)
         }
-        if ShortcutDefinition.all.contains(where: { $0.group != "Text Editing" && $0.original == input && chord($0) != input }) { return nil }
+        if ShortcutDefinition.all.contains(where: { $0.group != "文字编辑" && $0.original == input && chord($0) != input }) { return nil }
         // Letter tool shortcuts traditionally also accept Shift. Follow the base
         // assignment unless Shift has its own explicit command (e.g. cycle shape).
         if input.modifiers == 8 {
@@ -202,7 +203,7 @@ final class ShortcutSettings {
 
     func textEvent(_ event: NSEvent) -> NSEvent? {
         guard !overrides.isEmpty else { return event }
-        let definitions = ShortcutDefinition.all.filter { $0.group == "Text Editing" || $0.original == ShortcutChord("\u{1b}") }
+        let definitions = ShortcutDefinition.all.filter { $0.group == "文字编辑" || $0.original == ShortcutChord("\u{1b}") }
         let input = ShortcutChord(event)
         if let definition = definitions.first(where: { chord($0) == input }) {
             return definition.original == input ? event : definition.original.event(like: event)
@@ -238,7 +239,7 @@ private struct KeyboardShortcutsSheet: View {
             TextField("搜索快捷键", text: $search).textFieldStyle(.roundedBorder)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 6) {
-                    ForEach(["Menus", "Canvas & Layers", "Text Editing"], id: \.self) { group in
+                    ForEach(["菜单", "画布与图层", "文字编辑"], id: \.self) { group in
                         Text(group).font(.headline).padding(.top, 8)
                         ForEach(ShortcutDefinition.all.filter { $0.group == group && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)) }) { definition in
                             HStack {

@@ -11,7 +11,7 @@ struct CameraRawDetailControls: View {
             Text("锐化").font(.subheadline)
             sharpenSlider("数量", \.sharpenAmount, range: CameraRawDetailSettings.sharpenAmountRange, decimals: 0, reset: 0,
                           help: "Controls how strong the sharpening is.")
-            sharpenSlider("Radius", \.sharpenRadius, range: CameraRawDetailSettings.unitRange, decimals: 0, reset: 10,
+            sharpenSlider("半径", \.sharpenRadius, range: CameraRawDetailSettings.unitRange, decimals: 0, reset: 10,
                           help: "How far from each edge the sharpening reaches, in pixels.")
             sharpenSlider("Detail", \.sharpenDetail, range: CameraRawDetailSettings.unitRange, decimals: 0, reset: 25,
                           help: "Emphasizes fine texture over broader edges.")
@@ -170,12 +170,12 @@ struct CameraRawOpticsControls: View {
                 CameraRawSlider(value: raw.optics[keyPath: low], range: CameraRawOpticsSettings.hueRange, track: .plain,
                                 help: "Start of the hue range, in degrees.",
                                 onChange: { value in update { $0.cameraRaw.optics[keyPath: low] = value.rounded() } },
-                                onReset: { update { $0.cameraRaw.optics[keyPath: low] = title.contains("Purple") ? 270 : 60 } })
+                                onReset: { update { $0.cameraRaw.optics[keyPath: low] = title.contains("紫色") ? 270 : 60 } })
                 Text("高").font(.caption2).help("色相范围终点，单位为度。")
                 CameraRawSlider(value: raw.optics[keyPath: high], range: CameraRawOpticsSettings.hueRange, track: .plain,
                                 help: "End of the hue range, in degrees.",
                                 onChange: { value in update { $0.cameraRaw.optics[keyPath: high] = value.rounded() } },
-                                onReset: { update { $0.cameraRaw.optics[keyPath: high] = title.contains("Purple") ? 310 : 120 } })
+                                onReset: { update { $0.cameraRaw.optics[keyPath: high] = title.contains("紫色") ? 310 : 120 } })
             }
         }
         .padding(.leading, CameraRawControls.labelWidth + 10)

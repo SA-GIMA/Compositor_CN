@@ -10,8 +10,10 @@ struct TransformInspector: View {
         HStack(spacing: 12) {
           Text(session.transformTargetsMask ? "变换蒙版" : "变换").font(ToolHeaderStyle.titleFont)
               .padding(.leading, 18)
-          Toggle("自动选择", isOn: $session.transformAutoSelect)
-              .help("点击画布即可选择图层。关闭时，按住 Command 选择图层。")
+          // Command flips Auto Select while it's held, and the box shows it flipped (see HeldModifiers).
+          Toggle("自动选择", isOn: Binding(get: { session.transformAutoSelect != held.contains(.command) },
+                                              set: { session.transformAutoSelect = $0 != held.contains(.command) }))
+              .help("点击画布选择图层。按住 Command 点击可反向选择。")
               .accessibilityIdentifier("transformAutoSelect")
           Toggle("显示控件", isOn: $session.showsTransformControls)
               .help("显示变换框与手柄（⌘H）。隐藏后，拖动画布任意位置即可移动图层。")
@@ -19,11 +21,13 @@ struct TransformInspector: View {
             HStack(spacing: 12) {
                 field("X", value: value.origin.x) { $0.origin.x = $1 }.frame(width: 85)
                 field("Y", value: value.origin.y) { $0.origin.y = $1 }.frame(width: 85)
-                TransformValueField(label: "W", value: value.size.width, range: 1...30_000) { resize($0, width: true) }.frame(width: 85)
-                TransformValueField(label: "H", value: value.size.height, range: 1...30_000) { resize($0, width: false) }.frame(width: 85)
-                Toggle(isOn: $session.locksTransformRatio) { Image(systemName: "link") }
-                    .toggleStyle(.button).help("锁定长宽比")
-                TransformValueField(label: "缩放", suffix: "%", value: value.scalePercent(pixelSize: pixelSize), range: 0.1...30_000) { number in
+                TransformValueField(label: "W", value: value.size.width, range: 1...30_000, finish: finish) { resize($0, width: true) }.frame(width: 85)
+                TransformValueField(label: "H", value: value.size.height, range: 1...30_000, finish: finish) { resize($0, width: false) }.frame(width: 85)
+                // Shift flips the lock while dragging a handle, and the button shows it flipped.
+                Toggle(isOn: Binding(get: { session.locksTransformRatio != held.contains(.shift) },
+                                     set: { session.locksTransformRatio = $0 != held.contains(.shift) })) { Image(systemName: "link") }
+                    .toggleStyle(.button).help("锁定宽高比。拖动手柄时按住 Shift 可反向。")
+                TransformValueField(label: "缩放", suffix: "%", value: value.scalePercent(pixelSize: pixelSize), range: 0.1...30_000, finish: finish) { number in
                     change { value in
                         guard number > 0 else { return }
                         value = value.scaled(toPercent: number, pixelSize: pixelSize)
@@ -44,24 +48,45 @@ struct TransformInspector: View {
             }.disabled((!session.canTransform && session.transformEdit == nil) || session.transformEdit?.corners != nil)
                 .padding(.horizontal, 18)
           }.scrollIndicators(.hidden)
-          Button("取消") { session.cancelTransform() }.configuredNativeShortcut(.escape)
-              .disabled(session.transformEdit == nil)
-          Button("应用") { session.commitTransform() }.configuredNativeShortcut(.return)
-              .disabled(session.transformEdit == nil).accessibilityIdentifier("applyTransform")
+          // Only an edit that waits for them — typed values, ⌘T, a distortion — has anything to cancel or apply. A
+          // handle drag applies itself on release, and ghosted buttons after it read as the pixels being resampled,
+          // which they never are. Left in place unseen, so Escape and Return still reach a drag in progress.
+          let pending = session.transformEdit?.persistent == true
+          HStack(spacing: 12) {
+              Button("取消") { session.cancelTransform() }.configuredNativeShortcut(.escape)
+                  .disabled(session.transformEdit == nil)
+              Button("应用") { session.commitTransform() }.configuredNativeShortcut(.return)
+                  .disabled(session.transformEdit == nil).accessibilityIdentifier("applyTransform")
+          }
+          .opacity(pending ? 1 : 0).allowsHitTesting(pending).accessibilityHidden(!pending)
+          .animation(.easeOut(duration: 0.12), value: pending)
         }.padding(.trailing, 18).toolHeaderBar().releasesFocusOnCommit(session)
     }
 
     /// 100% scale: the layer's pixels (a blank layer's size before this edit, so typing doesn't compound).
+    private var held: NSEvent.ModifierFlags { HeldModifiers.shared.flags }
     private var pixelSize: CGSize { session.transformPixelSize ?? session.activeLayer?.size ?? value.size }
     private func field(_ label: String, value: CGFloat, range: ClosedRange<CGFloat> = -30_000...30_000,
                        set: @escaping (inout LayerTransform, CGFloat) -> Void) -> some View {
-        TransformValueField(label: label, value: value, range: range) { number in change { set(&$0, number) } }
+        TransformValueField(label: label, value: value, range: range, finish: finish) { number in change { set(&$0, number) } }
     }
+    /// A value typed, stepped or dragged shows on the canvas as it changes, and is applied without Cancel or Apply —
+    /// a transform never resamples the layer's pixels, so there is nothing to confirm — as one undo step once the
+    /// field is done with it (see `finish`), as a handle drag is when it's let go. An edit already waiting for Apply —
+    /// ⌘T, a distortion, selected pixels being transformed — takes it as part of that edit.
     private func change(_ update: (inout LayerTransform) -> Void) {
-        if session.transformEdit == nil { session.beginTransform() }
+        if session.transformEdit == nil {
+            session.beginTransform(persistent: false)
+            session.transformEdit?.fromFields = true
+        }
         guard var value = session.transformEdit?.draft else { return }
         update(&value)
         session.previewTransform(value)
+    }
+    /// A field done with its value — a drag on its label let go, or the field left (Return, Tab, a click elsewhere):
+    /// what the fields changed is applied, one undo step.
+    private func finish() {
+        if session.transformEdit?.fromFields == true { session.commitTransform() }
     }
     private func resize(_ number: CGFloat, width: Bool) {
         change { value in
@@ -82,6 +107,8 @@ private struct TransformValueField: View {
     var suffix: String? = nil
     let value: CGFloat
     let range: ClosedRange<CGFloat>
+    /// The field is done with its value: a drag on its label let go, or the field left.
+    let finish: () -> Void
     let change: (CGFloat) -> Void
     @State private var text = ""
     @State private var stepper = ArrowStepper()
@@ -92,13 +119,13 @@ private struct TransformValueField: View {
                 .scrubbable(sensitivity: 1, value: Binding(get: { value }, set: { newValue in
                     change(newValue)
                     text = Self.formatted(Double(newValue))
-                }), range: range, step: 1)
+                }), range: range, step: 1, onEnd: finish)
             TextField(label, text: $text)
                 .textFieldStyle(.roundedBorder).focused($focused)
                 .accessibilityIdentifier("transform\(label)")
                 .onAppear { sync() }
                 .onChange(of: value) { if !focused { sync() } }
-                .onChange(of: focused) { if !focused { sync() } }
+                .onChange(of: focused) { if !focused { finish(); sync() } }
                 .onChange(of: text) {
                     if focused, let number = Double(text), number.isFinite { change(CGFloat(number)) }
                 }

@@ -47,7 +47,7 @@ struct CameraRawGeometryControls: View {
             geometrySlider("Horizontal", \.horizontal, help: "Straightens horizontal lines toward the center.")
             geometrySlider("Rotate", \.rotate, range: CameraRawGeometrySettings.rotateRange, help: "Rotates the picture around its center.")
             geometrySlider("Aspect", \.aspect, help: "Stretches width relative to height.")
-            geometrySlider("Scale", \.scale, help: "Zooms the transformed picture within the frame.")
+            geometrySlider("Scale", \.scale, help: "在画框内缩放变换后的图像。")
             geometrySlider("Offset X", \.offsetX, help: "Moves the picture left or right.")
             geometrySlider("Offset Y", \.offsetY, help: "Moves the picture up or down.")
             Toggle("约束裁剪", isOn: binding(\.constrainCrop))

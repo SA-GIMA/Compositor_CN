@@ -65,6 +65,18 @@
       [
         ".help(\"The brush trails the pointer on a string this long, so a shaky hand still draws a smooth line\")",
         ".help(\"画笔以该长度拖在指针后，手抖也能画出平滑线条\")"
+      ],
+      [
+        "Text(\"Radius\")",
+        "Text(\"半径\")"
+      ],
+      [
+        "TextField(\"Radius\"",
+        "TextField(\"半径\""
+      ],
+      [
+        "\"How far the blur softens, in pixels\"",
+        "\"模糊柔化范围（像素）\""
       ]
     ],
     "UI/ImageSizeSheet.swift": [
@@ -163,6 +175,10 @@
       [
         "Text(valid ? \"Result: \\(Int(width.rounded())) × \\(Int(height.rounded())) pixels\" : \"Use 1–30,000 pixels per side, up to 100 megapixels, and 1–9,600 pixels/inch.\")",
         "Text(valid ? \"结果：\\(Int(width.rounded())) × \\(Int(height.rounded())) 像素\" : \"每边 1–30,000 像素，总计不超过 1 亿像素；分辨率为 1–9,600 像素/英寸。\")"
+      ],
+      [
+        "Text(valid ? \"Result: \\(Int(width.rounded())) × \\(Int(height.rounded())) pixels\" : \"Use 1–\\(DocumentLimits.maxSide.formatted()) pixels per side, up to \\(DocumentLimits.maxSurfaceMegapixels) megapixels, and 1–9,600 pixels/inch.\")",
+        "Text(valid ? \"结果：\\(Int(width.rounded())) × \\(Int(height.rounded())) 像素\" : \"请使用 1–\\(DocumentLimits.maxSide.formatted()) 像素/边，最大 \\(DocumentLimits.maxSurfaceMegapixels) 百万像素，分辨率 1–9,600 像素/英寸。\")"
       ]
     ],
     "UI/CanvasSizeSheet.swift": [
@@ -351,6 +367,14 @@
       [
         "Button(\"Apply\") { session.commitTransform() }",
         "Button(\"应用\") { session.commitTransform() }"
+      ],
+      [
+        "\"Select layers by clicking the canvas. Hold Command to turn it the other way while you click.\"",
+        "\"点击画布选择图层。按住 Command 点击可反向选择。\""
+      ],
+      [
+        "\"Lock aspect ratio. Hold Shift while dragging a handle to turn it the other way.\"",
+        "\"锁定宽高比。拖动手柄时按住 Shift 可反向。\""
       ]
     ],
     "UI/ShapeControls.swift": [
@@ -441,6 +465,10 @@
       [
         "Text(\"Enter a whole number from 1 to \\(maximum) px.\")",
         "Text(\"请输入 1 到 \\(maximum) 像素的整数。\")"
+      ],
+      [
+        "TextField(\"Feather\", value: Binding",
+        "TextField(\"羽化\", value: Binding"
       ]
     ],
     "UI/LayerAppearanceControls.swift": [
@@ -579,6 +607,30 @@
       [
         "swatch(\"Highlights\", settings.highlights)",
         "swatch(\"高光\", settings.highlights)"
+      ],
+      [
+        "\"How far apart the screen's lines are\"",
+        "\"屏幕扫描线间距\""
+      ],
+      [
+        "\"Light blooming around the lines, like a CRT's phosphors\"",
+        "\"扫描线周围的辉光，类似 CRT 荧光粉\""
+      ],
+      [
+        "\"Break the lines into glowing beads\"",
+        "\"把扫描线打散成发光珠点\""
+      ],
+      [
+        "\"Make the lines waver sideways down the screen, like a CRT losing sync\"",
+        "\"让扫描线横向抖动，如同 CRT 失步\""
+      ],
+      [
+        "\"Choose the dark color\"",
+        "\"选择深色\""
+      ],
+      [
+        "\"Choose the light color\"",
+        "\"选择浅色\""
       ]
     ],
     "UI/EffectsSheet.swift": [
@@ -659,6 +711,206 @@
       [
         "button.title = recording ? \"Press keys…\" : chord.label",
         "button.title = recording ? \"按下按键…\" : chord.label"
+      ],
+      [
+        "group: menu ? \"Menus\" : \"Canvas & Layers\"",
+        "group: menu ? \"菜单\" : \"画布与图层\""
+      ],
+      [
+        "group: \"Text Editing\"",
+        "group: \"文字编辑\""
+      ],
+      [
+        "\"Text Editing\", original",
+        "\"文字编辑\", original"
+      ],
+      [
+        "ForEach([\"Menus\", \"Canvas & Layers\", \"Text Editing\"]",
+        "ForEach([\"菜单\", \"画布与图层\", \"文字编辑\"]"
+      ],
+      [
+        "entry(\"Undo\", \"z\", 1, menu: true), entry(\"Redo\", \"z\", 9, menu: true)",
+        "entry(\"撤销\", \"z\", 1, menu: true), entry(\"重做\", \"z\", 9, menu: true)"
+      ],
+      [
+        "entry(\"New Canvas\", \"n\", 1, menu: true), entry(\"Open Project\", \"o\", 1, menu: true)",
+        "entry(\"新建画布\", \"n\", 1, menu: true), entry(\"打开项目\", \"o\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Save\", \"s\", 1, menu: true), entry(\"Save As\", \"s\", 9, menu: true)",
+        "entry(\"存储\", \"s\", 1, menu: true), entry(\"存储为\", \"s\", 9, menu: true)"
+      ],
+      [
+        "entry(\"Export PNG\", \"e\", 9, menu: true), entry(\"Export JPEG\", \"s\", 11, menu: true)",
+        "entry(\"导出 PNG\", \"e\", 9, menu: true), entry(\"导出 JPEG\", \"s\", 11, menu: true)"
+      ],
+      [
+        "entry(\"Close Project\", \"w\", 1, menu: true), entry(\"Fit Canvas\", \"0\", 1, menu: true)",
+        "entry(\"关闭项目\", \"w\", 1, menu: true), entry(\"适合画布\", \"0\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Actual Pixels\", \"1\", 1, menu: true), entry(\"Zoom In\", \"=\", 1, menu: true)",
+        "entry(\"实际像素\", \"1\", 1, menu: true), entry(\"放大\", \"=\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Zoom Out\", \"-\", 1, menu: true)",
+        "entry(\"缩小\", \"-\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Cut\", \"x\", 1, menu: true)",
+        "entry(\"剪切\", \"x\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Copy\", \"c\", 1, menu: true)",
+        "entry(\"拷贝\", \"c\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Paste\", \"v\", 1, menu: true)",
+        "entry(\"粘贴\", \"v\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Fill with Foreground\", \"\\u{7f}\", 2, menu: true)",
+        "entry(\"填充前景色\", \"\\u{7f}\", 2, menu: true)"
+      ],
+      [
+        "entry(\"Fill with Background\", \"\\u{7f}\", 1, menu: true)",
+        "entry(\"填充背景色\", \"\\u{7f}\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Content-Aware Fill\", \"\\u{7f}\", 8, menu: true)",
+        "entry(\"内容识别填充\", \"\\u{7f}\", 8, menu: true)"
+      ],
+      [
+        "entry(\"Select All\", \"a\", 1, menu: true)",
+        "entry(\"全部\", \"a\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Inverse Selection\", \"i\", 9, menu: true), entry(\"Select Subject\", \"a\", 3, menu: true)",
+        "entry(\"反选\", \"i\", 9, menu: true), entry(\"主体\", \"a\", 3, menu: true)"
+      ],
+      [
+        "entry(\"Curves\", \"m\", 1, menu: true), entry(\"Levels\", \"l\", 1, menu: true)",
+        "entry(\"曲线\", \"m\", 1, menu: true), entry(\"色阶\", \"l\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Hue/Saturation\", \"u\", 1, menu: true), entry(\"Invert Pixels / Mask\", \"i\", 1, menu: true)",
+        "entry(\"色相/饱和度\", \"u\", 1, menu: true), entry(\"反相像素/蒙版\", \"i\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Canvas Size\", \"c\", 3, menu: true), entry(\"Image Size\", \"i\", 3, menu: true)",
+        "entry(\"画布大小\", \"c\", 3, menu: true), entry(\"图像大小\", \"i\", 3, menu: true)"
+      ],
+      [
+        "entry(\"Transform Layer / Selection\", \"t\", 1, menu: true), entry(\"Duplicate / Layer via Copy\", \"j\", 1, menu: true)",
+        "entry(\"变换图层/选区\", \"t\", 1, menu: true), entry(\"复制/通过拷贝的图层\", \"j\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Toggle Clipping Mask\", \"g\", 3, menu: true), entry(\"Group Layers\", \"g\", 1, menu: true)",
+        "entry(\"创建/释放剪贴蒙版\", \"g\", 3, menu: true), entry(\"编组所选图层\", \"g\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Ungroup Layers\", \"g\", 9, menu: true)",
+        "entry(\"取消编组\", \"g\", 9, menu: true)"
+      ],
+      [
+        "entry(\"Merge Layers\", \"e\", 1, menu: true)",
+        "entry(\"合并图层\", \"e\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Show Grid\", \"'\", 1, menu: true), entry(\"Show Guides\", \";\", 1, menu: true)",
+        "entry(\"显示网格\", \"'\", 1, menu: true), entry(\"显示参考线\", \";\", 1, menu: true)"
+      ],
+      [
+        "entry(\"Show Rulers\", \"r\", 1, menu: true)",
+        "entry(\"显示标尺\", \"r\", 1, menu: true)"
+      ],
+      [
+        "(\"Select tool\", \"a\"), (\"Move / Transform tool\", \"v\"), (\"Hand tool\", \"h\")",
+        "(\"选框工具\", \"a\"), (\"移动/变换工具\", \"v\"), (\"抓手工具\", \"h\")"
+      ],
+      [
+        "(\"Zoom tool\", \"z\"), (\"Brush tool\", \"b\"), (\"Eraser\", \"e\"), (\"Spot Healing\", \"j\")",
+        "(\"缩放工具\", \"z\"), (\"画笔工具\", \"b\"), (\"橡皮擦\", \"e\"), (\"污点修复\", \"j\")"
+      ],
+      [
+        "(\"Clone Stamp\", \"s\"), (\"Type tool\", \"t\"), (\"Gradient tool\", \"g\"), (\"Shape tool\", \"u\")",
+        "(\"仿制图章\", \"s\"), (\"文字工具\", \"t\"), (\"渐变工具\", \"g\"), (\"形状工具\", \"u\")"
+      ],
+      [
+        "(\"Eyedropper tool\", \"i\"), (\"Marquee / cycle shape\", \"m\"), (\"Magic\", \"w\")",
+        "(\"吸管工具\", \"i\"), (\"选框/切换形状\", \"m\"), (\"魔棒\", \"w\")"
+      ],
+      [
+        "(\"Lasso / cycle mode\", \"l\"), (\"Blur / Smudge / Liquify\", \"r\"), (\"Crop tool\", \"c\")",
+        "(\"套索/切换模式\", \"l\"), (\"模糊/涂抹/液化\", \"r\"), (\"裁剪工具\", \"c\")"
+      ],
+      [
+        "(\"Swap foreground/background\", \"x\"), (\"Reset colors\", \"d\"), (\"Cycle tool mode\", \"\\t\")",
+        "(\"切换前景色/背景色\", \"x\"), (\"恢复默认颜色\", \"d\"), (\"切换工具模式\", \"\\t\")"
+      ],
+      [
+        "(\"Temporary Hand tool (hold)\", \" \"), (\"Delete selection / layer / effect / lasso point\", \"\\u{7f}\")",
+        "(\"临时抓手工具（按住）\", \" \"), (\"删除选区/图层/效果/套索点\", \"\\u{7f}\")"
+      ],
+      [
+        "(\"Apply current canvas operation\", \"\\r\"), (\"Cancel current canvas operation\", \"\\u{1b}\")",
+        "(\"应用当前画布操作\", \"\\r\"), (\"取消当前画布操作\", \"\\u{1b}\")"
+      ],
+      [
+        "(\"Decrease brush size\", \"[\"), (\"Increase brush size\", \"]\")",
+        "(\"减小画笔大小\", \"[\"), (\"增大画笔大小\", \"]\")"
+      ],
+      [
+        "entry(\"Decrease brush hardness\", \"[\", 8), entry(\"Increase brush hardness\", \"]\", 8)",
+        "entry(\"减小画笔硬度\", \"[\", 8), entry(\"增大画笔硬度\", \"]\", 8)"
+      ],
+      [
+        "entry(\"Previous blend mode\", \"-\", 8), entry(\"Next blend mode\", \"=\", 8)",
+        "entry(\"上一个混合模式\", \"-\", 8), entry(\"下一个混合模式\", \"=\", 8)"
+      ],
+      [
+        "entry(\"Cycle shape kind\", \"u\", 8)",
+        "entry(\"切换形状类型\", \"u\", 8)"
+      ],
+      [
+        "entry(\"Opacity digit \\(digit) (type two for exact %)\", String(digit))",
+        "entry(\"不透明度数字 \\(digit)（连按两位精确到 %）\", String(digit))"
+      ],
+      [
+        "for (direction, key) in [(\"Left\", \"\\u{f702}\"), (\"Right\", \"\\u{f703}\"), (\"Up\", \"\\u{f700}\"), (\"Down\", \"\\u{f701}\")] {",
+        "for (direction, key) in [(\"左\", \"\\u{f702}\"), (\"右\", \"\\u{f703}\"), (\"上\", \"\\u{f700}\"), (\"下\", \"\\u{f701}\")] {"
+      ],
+      [
+        "entry(\"Nudge \\(direction) 1 px\", key), entry(\"Nudge \\(direction) 10 px\", key, 8)",
+        "entry(\"微移\\(direction) 1 像素\", key), entry(\"微移\\(direction) 10 像素\", key, 8)"
+      ],
+      [
+        "entry(\"Move selected pixels \\(direction) 1 px\", key, 1), entry(\"Move selected pixels \\(direction) 10 px\", key, 9)",
+        "entry(\"移动选中像素\\(direction) 1 像素\", key, 1), entry(\"移动选中像素\\(direction) 10 像素\", key, 9)"
+      ],
+      [
+        "(\"Decrease tracking\", \"\\u{f702}\"), (\"Increase tracking\", \"\\u{f703}\")",
+        "(\"减小字距\", \"\\u{f702}\"), (\"增大字距\", \"\\u{f703}\")"
+      ],
+      [
+        "(\"Decrease leading\", \"\\u{f700}\"), (\"Increase leading\", \"\\u{f701}\")",
+        "(\"减小行距\", \"\\u{f700}\"), (\"增大行距\", \"\\u{f701}\")"
+      ],
+      [
+        "title + \" by 10\"",
+        "title + \"（×10）\""
+      ],
+      [
+        "entry(\"Toggle Levels preview\", \"p\", 2)",
+        "entry(\"切换色阶预览\", \"p\", 2)"
+      ],
+      [
+        "[\"\\u{7f}\": \"Delete\", \"\\r\": \"Return\", \"\\u{1b}\": \"Esc\", \"\\t\": \"Tab\", \" \": \"Space\",",
+        "[\"\\u{7f}\": \"Delete\", \"\\r\": \"Return\", \"\\u{1b}\": \"Esc\", \"\\t\": \"Tab\", \" \": \"空格\","
+      ],
+      [
+        "var isMenu: Bool { group == \"Menus\" }",
+        "var isMenu: Bool { group == \"菜单\" }"
       ]
     ],
     "UI/ProjectTabs.swift": [
@@ -719,12 +971,68 @@
       [
         "toolTip = \"Click to select; double-click to edit; Option-drag to copy \" + kind.rawValue.lowercased()",
         "toolTip = \"点击选择；双击编辑；Option 拖动拷贝\" + kind.displayName"
+      ],
+      [
+        "deleteTitle = \"Delete Mask\"",
+        "deleteTitle = \"删除蒙版\""
+      ],
+      [
+        "deleteTitle = \"Delete Selected Layers\"",
+        "deleteTitle = \"删除所选图层\""
+      ],
+      [
+        "deleteTitle = \"Delete Layer\"",
+        "deleteTitle = \"删除图层\""
+      ],
+      [
+        "NSMenuItem(title: \"Ungroup Layers\"",
+        "NSMenuItem(title: \"取消编组\""
+      ],
+      [
+        "menuItem.title == \"Add Mask\"",
+        "menuItem.title == \"添加蒙版\""
+      ],
+      [
+        "\\(layer.isVisible ? \"Hide\" : \"Show\") \\(layer.name)",
+        "\\(layer.isVisible ? \"隐藏\" : \"显示\") \\(layer.name)"
+      ],
+      [
+        "\"Clipping mask based on \\(sourceName). Option-click the bottom of its row to release.\"",
+        "\"基于 \\(sourceName) 的剪贴蒙版。Option 点击行底部可释放。\""
+      ],
+      [
+        "\"Clipping mask based on \\(source.name). Option-click the bottom of its row to release.\"",
+        "\"基于 \\(source.name) 的剪贴蒙版。Option 点击行底部可释放。\""
+      ],
+      [
+        "maskThumbnail.toolTip = \"Select layer mask; Option-click to view it alone; Shift-click to enable/disable; Cmd-click to select its black areas (Cmd-Shift-click the white).\"",
+        "maskThumbnail.toolTip = \"选择图层蒙版；Option 点击单独查看；Shift 点击启用/停用；Cmd 点击选取黑色区域（Cmd-Shift 点击选取白色）。\""
+      ],
+      [
+        "maskThumbnail.toolTip = \"Select layer mask; Option-click to view it alone; Shift-click to enable/disable; Cmd-click to select its black areas (Cmd-Shift adds, Cmd-Option subtracts)\"",
+        "maskThumbnail.toolTip = \"选择图层蒙版；Option 点击单独查看；Shift 点击启用/停用；Cmd 点击选取黑色区域（Cmd-Shift 添加，Cmd-Option 减去）\""
       ]
     ],
     "CompositorApp.swift": [
       [
         "Button(session.selectedEffect != nil ? \"Delete \" + session.selectedEffect!.kind.rawValue : session.isMaskSelected && session.activeLayer?.mask != nil ? \"Delete Layer Mask\" : session.selectedLayerIDs.count > 1 ? \"Delete Layers\" : \"Delete Layer\")",
         "Button(session.selectedEffect != nil ? \"删除\" + session.selectedEffect!.kind.displayName : session.isMaskSelected && session.activeLayer?.mask != nil ? \"删除图层蒙版\" : session.selectedLayerIDs.count > 1 ? \"删除图层\" : \"删除图层\")"
+      ],
+      [
+        "Button(session.isMaskSelected ? \"反相蒙版\" : \"Invert\")",
+        "Button(session.isMaskSelected ? \"反相蒙版\" : \"反相\")"
+      ],
+      [
+        "Button(\"Ungroup Layers\")",
+        "Button(\"取消编组\")"
+      ],
+      [
+        ": \"Undo\")",
+        ": \"撤销\")"
+      ],
+      [
+        ": \"Redo\")",
+        ": \"重做\")"
       ]
     ],
     "ContentView.swift": [
@@ -859,6 +1167,10 @@
       [
         "case .encode: \"The image could not be encoded.\"",
         "case .encode: \"无法编码该图像。\""
+      ],
+      [
+        "case .tooLarge: \"Image export supports canvases up to \\(DocumentLimits.maxSurfaceMegapixels) megapixels and \\(DocumentLimits.maxSide.formatted()) pixels per side.\"",
+        "case .tooLarge: \"图像导出最大支持 \\(DocumentLimits.maxSurfaceMegapixels) 百万像素、单边不超过 \\(DocumentLimits.maxSide.formatted()) 像素的画布。\""
       ]
     ],
     "Document/MagicWand.swift": [
@@ -871,12 +1183,24 @@
       [
         "\"The copied layers exceed this project’s 100-megapixel limit.\"",
         "\"拷贝的图层超出了本项目 1 亿像素的限制。\""
+      ],
+      [
+        "editName: \"Paste\"",
+        "editName: \"粘贴\""
+      ],
+      [
+        "\"The copied layers exceed this project’s \\(DocumentLimits.documentBudgetMegapixels)-megapixel limit.\"",
+        "\"拷贝的图层超出本项目 \\(DocumentLimits.documentBudgetMegapixels) 百万像素上限。\""
       ]
     ],
     "Document/ShapeTool.swift": [
       [
         "\"That shape is too large. A shape can cover up to 100 megapixels.\"",
         "\"形状过大。单个形状最多覆盖 1 亿像素。\""
+      ],
+      [
+        "\"That shape is too large. A shape can cover up to \\(DocumentLimits.maxSurfaceMegapixels) megapixels.\"",
+        "\"形状过大。形状最大可覆盖 \\(DocumentLimits.maxSurfaceMegapixels) 百万像素。\""
       ]
     ],
     "Document/SmudgeLiquify.swift": [
@@ -889,6 +1213,10 @@
       [
         "\"That text box exceeds the 30,000-pixel or 100-megapixel limit.\"",
         "\"该文本框超出 30,000 像素或 1 亿像素限制。\""
+      ],
+      [
+        "\"That text box exceeds the \\(DocumentLimits.maxSide.formatted())-pixel or \\(DocumentLimits.maxSurfaceMegapixels)-megapixel limit.\"",
+        "\"文本框超出 \\(DocumentLimits.maxSide.formatted()) 像素或 \\(DocumentLimits.maxSurfaceMegapixels) 百万像素上限。\""
       ]
     ],
     "UI/PSDConversionSheet.swift": [
@@ -963,6 +1291,14 @@
       [
         "ImageLayer(name: \"Tip\", blankSize: size)",
         "ImageLayer(name: \"笔尖\", blankSize: size)"
+      ],
+      [
+        "$0.isMenu && $0.title == \"Zoom In\"",
+        "$0.isMenu && $0.title == \"放大\""
+      ],
+      [
+        "$0.isMenu && $0.title == \"Zoom Out\"",
+        "$0.isMenu && $0.title == \"缩小\""
       ]
     ],
     "UI/BlendModePicker.swift": [
@@ -979,12 +1315,178 @@
       [
         "    private enum Section: String, CaseIterable, Identifiable {\n        case light = \"Light\"\n        case color = \"Color\"\n        case colorGrading = \"Color Grading\"\n        case effects = \"Effects\"\n        case curve = \"Curve\"\n        case colorMixer = \"Color Mixer\"\n        case detail = \"Detail\"\n        case optics = \"Optics\"\n        case geometry = \"Geometry\"\n        case calibration = \"Calibration\"\n        var id: String { rawValue }\n    }",
         "    private enum Section: String, CaseIterable, Identifiable {\n        case light = \"光线\"\n        case color = \"颜色\"\n        case colorGrading = \"分级\"\n        case effects = \"效果\"\n        case curve = \"曲线\"\n        case colorMixer = \"混色器\"\n        case detail = \"细节\"\n        case optics = \"光学\"\n        case geometry = \"几何\"\n        case calibration = \"校准\"\n        var id: String { rawValue }\n    }"
+      ],
+      [
+        "\"Show clipped shadows in blue on the preview.\"",
+        "\"在预览中用蓝色显示修剪的阴影。\""
+      ],
+      [
+        "\"Show clipped highlights in red on the preview.\"",
+        "\"在预览中用红色显示修剪的高光。\""
+      ],
+      [
+        "\"Shadow Clipping Indicator\"",
+        "\"阴影修剪指示\""
+      ],
+      [
+        "\"Highlight Clipping Indicator\"",
+        "\"高光修剪指示\""
+      ],
+      [
+        "\"RGB histogram\"",
+        "\"RGB 直方图\""
+      ],
+      [
+        "\"Vectorscope\"",
+        "\"矢量示波器\""
       ]
     ],
     "Document/ImageTrim.swift": [
       [
         "enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {\n    case transparentPixels = \"Transparent Pixels\"\n    case topLeftPixelColor = \"Top Left Pixel Color\"\n    case bottomRightPixelColor = \"Bottom Right Pixel Color\"",
         "enum TrimBasedOn: String, CaseIterable, Identifiable, Sendable {\n    case transparentPixels = \"透明像素\"\n    case topLeftPixelColor = \"左上角像素颜色\"\n    case bottomRightPixelColor = \"右下角像素颜色\""
+      ],
+      [
+        "actionName: \"Trim\"",
+        "actionName: \"裁切\""
+      ]
+    ],
+    "Document/EditorSession+Brush.swift": [
+      [
+        "stroke.settings.erasing ? \"Erase\" : stroke.isBlur ? \"Blur\"",
+        "stroke.settings.erasing ? \"橡皮擦\" : stroke.isBlur ? \"模糊\""
+      ]
+    ],
+    "Document/LayerMask.swift": [
+      [
+        "beginEdit(revealing ? \"Reveal Selection\" : \"Hide Selection\")",
+        "beginEdit(revealing ? \"显示选区\" : \"隐藏选区\")"
+      ]
+    ],
+    "Document/SelectionEdits.swift": [
+      [
+        "beginEdit(mask ? \"反相蒙版\" : \"Invert\")",
+        "beginEdit(mask ? \"反相蒙版\" : \"反相\")"
+      ]
+    ],
+    "Document/SelectionClipboard.swift": [
+      [
+        "editName: String = \"Duplicate Layer\"",
+        "editName: String = \"复制图层\""
+      ]
+    ],
+    "Document/LayerGroups.swift": [
+      [
+        "beginEdit(\"Ungroup Layers\")",
+        "beginEdit(\"取消编组\")"
+      ]
+    ],
+    "IO/ProjectController.swift": [
+      [
+        "sheet.title = \"Trim\"",
+        "sheet.title = \"裁切\""
+      ],
+      [
+        "actionName: \"Trim\"",
+        "actionName: \"裁切\""
+      ],
+      [
+        "alert.addButton(withTitle: \"Cancel\")",
+        "alert.addButton(withTitle: \"取消\")"
+      ]
+    ],
+    "IO/ProjectController+ExternalChanges.swift": [
+      [
+        "alert.addButton(withTitle: \"Revert\")",
+        "alert.addButton(withTitle: \"还原\")"
+      ],
+      [
+        "alert.addButton(withTitle: \"Keep Mine\")",
+        "alert.addButton(withTitle: \"保留我的\")"
+      ],
+      [
+        "\"Another app changed this project. You can revert to the version on disk, losing your unsaved changes, or keep the version open here.\"",
+        "\"其他应用更改了此项目。你可以还原为磁盘上的版本（放弃未保存更改），或保留当前打开的版本。\""
+      ],
+      [
+        "alert.informativeText = \"Another app changed this project. You can revert to the version on disk, losing your unsaved changes, or keep what you have.\"",
+        "alert.informativeText = \"其他应用更改了此项目。你可以还原为磁盘上的版本（放弃未保存更改），或保留当前版本。\""
+      ]
+    ],
+    "IO/ImageImporter.swift": [
+      [
+        "case .unsupported: \"Choose a JPEG, PNG, HEIC, TIFF, or Photoshop (PSD) file.\"",
+        "case .unsupported: \"请选择 JPEG、PNG、HEIC、TIFF 或 Photoshop（PSD）文件。\""
+      ]
+    ],
+    "UI/CameraRawDetailOpticsControls.swift": [
+      [
+        "sharpenSlider(\"Radius\"",
+        "sharpenSlider(\"半径\""
+      ],
+      [
+        "\"Purple\"",
+        "\"紫色\""
+      ]
+    ],
+    "UI/HueSaturationSheet.swift": [
+      [
+        "slider(\"Hue\", value: settings.hue, range: hueRange, unit: \"°\")",
+        "slider(\"色相\", value: settings.hue, range: hueRange, unit: \"°\")"
+      ],
+      [
+        "slider(\"Saturation\", value: settings.saturation, range: saturationRange, unit: \"\")",
+        "slider(\"饱和度\", value: settings.saturation, range: saturationRange, unit: \"\")"
+      ],
+      [
+        "slider(\"Lightness\", value: settings.lightness, range: -100...100, unit: \"\")",
+        "slider(\"明度\", value: settings.lightness, range: -100...100, unit: \"\")"
+      ]
+    ],
+    "UI/JPEGExportSheet.swift": [
+      [
+        ".help(\"Zoom in (⌘+), now \\(percent). At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas\")",
+        ".help(\"放大（⌘+），当前 \\(percent)。100% 时 JPEG 每一像素对应屏幕一像素，与画布相同\")"
+      ],
+      [
+        ".help(\"Zoom out (⌘−), now \\(percent)\")",
+        ".help(\"缩小（⌘−），当前 \\(percent)\")"
+      ]
+    ],
+    "UI/CameraRawGeometryCalibrationControls.swift": [
+      [
+        "help: \"Zooms the transformed picture within the frame.\"",
+        "help: \"在画框内缩放变换后的图像。\""
+      ]
+    ],
+    "UI/CameraRawColorControls.swift": [
+      [
+        "\"Drag on the picture to move the curve for the tone under the pointer.\"",
+        "\"在图像上拖动以调整指针下色调对应的曲线点。\""
+      ]
+    ],
+    "UI/LayerMaskMenu.swift": [
+      [
+        "\"Add layer mask (Option-click for a black mask)\"",
+        "\"添加图层蒙版（Option 点击添加黑色蒙版）\""
+      ],
+      [
+        "\"Layer Mask\"",
+        "\"图层蒙版\""
+      ],
+      [
+        "\"Show the image again (or Option-click the mask thumbnail)\"",
+        "\"重新显示图像（或 Option 点击蒙版缩略图）\""
+      ]
+    ],
+    "Document/LiveLayerMask.swift": [
+      [
+        "\"Bake keeps the current masked appearance in the dependent layers’ pixels. Remove Links reveals their full, unmasked pixels again.\"",
+        "\"「烘焙」将当前蒙版效果写入依赖图层像素。「移除链接」会重新显示完整未蒙版像素。\""
+      ],
+      [
+        "alert.informativeText = \"Bake keeps the current masked appearance in the dependent layers’ pixels. Remove Links reveals their pixels. You can undo either choice.\"",
+        "alert.informativeText = \"「烘焙」将当前蒙版效果写入依赖图层像素。「移除链接」会重新显示其像素。两种操作都可撤销。\""
       ]
     ]
   },

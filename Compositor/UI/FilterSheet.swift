@@ -193,13 +193,23 @@ struct FilterSheet: View {
                 }
             }
         }
-        if dither.style != .ascii {
+        if dither.style.usesPixelSize {
         control("像素大小", \.dither.pixelSize, range: DitherSettings.pixelSizeRange, unit: "px", decimals: 0, logarithmic: false)
             .help("抖动后每个像素的边长，数值越大越有复古屏幕的色块感")
         }
         if dither.style == .ascii {
             control("文字大小", \.dither.textSize, range: DitherSettings.textSizeRange, unit: "px", decimals: 0, logarithmic: false)
                 .help("每一行字符的高度")
+        }
+        if dither.style == .scanlines {
+            control("Line Spacing", \.dither.lineSpacing, range: DitherSettings.lineSpacingRange, unit: "px", decimals: 0, logarithmic: false)
+                .help("屏幕扫描线间距")
+            control("Glow", \.dither.glow, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                .help("扫描线周围的辉光，类似 CRT 荧光粉")
+            control("Dots", \.dither.dots, range: 0...100, unit: "%", decimals: 0, logarithmic: false)
+                .help("把扫描线打散成发光珠点")
+            control("Wobble", \.dither.wobble, range: DitherSettings.wobbleRange, unit: "px", decimals: 0, logarithmic: false)
+                .help("让扫描线横向抖动，如同 CRT 失步")
         }
         if dither.style.isHalftone {
             control("单元格大小", \.dither.cellSize, range: DitherSettings.cellSizeRange, unit: "px", decimals: 0, logarithmic: false)
@@ -237,13 +247,13 @@ struct FilterSheet: View {
         if dither.colors == .twoColors {
             HStack(spacing: 8) {
                 Text("暗色")
-                swatch(dither.dark, help: "Choose the dark color") { session.openDitherColorPicker(light: false) }
+                swatch(dither.dark, help: "选择深色") { session.openDitherColorPicker(light: false) }
                 Text("亮色").padding(.leading, 10)
-                swatch(dither.light, help: "Choose the light color") { session.openDitherColorPicker(light: true) }
+                swatch(dither.light, help: "选择浅色") { session.openDitherColorPicker(light: true) }
                 Spacer()
             }
         }
-        if dither.pixelSize > 1, dither.style != .ascii {
+        if dither.pixelSize > 1, dither.style.usesPixelSize {
             Picker("像素形状", selection: Binding(get: { dither.pixelShape }, set: { new in update { $0.dither.pixelShape = new } })) {
                 ForEach(DitherPixelShape.allCases, id: \.self) { item in
                     Text(item.displayName).tag(item)

@@ -329,8 +329,6 @@ extension EditorSession {
         case expand = "Expand", contract = "Contract", feather = "Feather"
     }
 
-
-
     /// Menu commands ask for an amount; the tool header applies its input directly.
     func promptSelectionAmount(_ operation: SelectionAmountOperation) {
         guard canModifySelection else { return }
@@ -389,8 +387,11 @@ extension EditorSession {
     func invertSelection() {
         guard let document, let current = selection else { return }
         let canvas = CGPath(rect: CGRect(origin: .zero, size: document.size), transform: nil)
-        setSelection(DocumentSelection(path: canvas.subtracting(current.path, using: .winding), antialiased: current.antialiased, feather: current.feather),
-                     name: "反选")
+        let inverse = DocumentSelection(path: canvas.subtracting(current.path, using: .winding), antialiased: current.antialiased,
+                                        feather: current.feather)
+        // The inverse of everything is no selection at all, as in Photoshop — not an invisible empty one that
+        // quietly stops every brush.
+        setSelection(inverse.isEmpty ? nil : inverse, name: "反选")
     }
 }
 

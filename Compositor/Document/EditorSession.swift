@@ -516,7 +516,7 @@ final class EditorSession {
     func displayedTransform(for layer: ImageLayer) -> LayerTransform {
         if let pending = pendingTransform(for: layer) { return pending }
         // Content-Aware Fill past the layer's edge previews on the grown layer.
-        if let edit = filterEdit, let grown = edit.grownTransform, edit.previewImage(for: layer.id) != nil { return grown }
+        if let edit = filterEdit, let grown = edit.preparedTransform, edit.previewImage(for: layer.id) != nil { return grown }
         return layer.transform
     }
     /// Whether transforming places only the active layer's mask (an unlinked mask selected in the Layers panel).
@@ -583,7 +583,15 @@ final class EditorSession {
     var opacityEditLayerID: UUID?
     var blendPreview: (layerID: UUID, mode: LayerBlendMode)?
     @ObservationIgnored var refreshCanvasPreview: (() -> Void)?
-    var isMaskSelected = false
+    var isMaskSelected = false { didSet { if !isMaskSelected { viewsMaskAlone = false } } }
+    /// Option-click on a mask thumbnail: the canvas shows the targeted mask by itself, in grayscale, so it can be
+    /// painted with nothing else in the way, as in Photoshop. Targeting the layer's pixels, or another layer, ends it.
+    var viewsMaskAlone = false
+    /// The layer whose mask the canvas is showing by itself; nil for the ordinary composite.
+    var maskAloneLayer: ImageLayer? {
+        guard viewsMaskAlone, isMaskSelected, let layer = activeLayer, layer.mask != nil else { return nil }
+        return layer
+    }
     var selectedLayerIDs: Set<UUID> = []
     var activeLayerID: UUID? {
         didSet {

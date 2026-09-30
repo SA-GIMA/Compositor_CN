@@ -107,7 +107,7 @@ extension EditorSession {
         guard !targets.isEmpty else { return false }
         let alert = NSAlert()
         alert.messageText = ids.count == 1 ? "此图层正在提供实时蒙版" : "这些图层正在提供实时蒙版"
-        alert.informativeText = "Bake keeps the current masked appearance in the dependent layers’ pixels. Remove Links reveals their pixels. You can undo either choice."
+        alert.informativeText = "「烘焙」将当前蒙版效果写入依赖图层像素。「移除链接」会重新显示其像素。两种操作都可撤销。"
         alert.addButton(withTitle: "栅格化并删除")
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "移除链接并删除")

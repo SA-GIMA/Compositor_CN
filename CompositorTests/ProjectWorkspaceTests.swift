@@ -20,6 +20,40 @@ import Testing
         #expect(!workspace.current.session.showsNewDocument)
     }
 
+    /// A gradient waiting for Apply used to leave Quit and the close button doing nothing at all; quitting applies it.
+    @Test func quittingAppliesAPendingGradient() async throws {
+        let workspace = ProjectWorkspace()
+        let session = workspace.current.session
+        session.createDocument(width: 100, height: 20)
+        session.addBlankLayer()
+        session.selectTool(.gradient)
+        session.beginGradient(at: CGPoint(x: 0, y: 10))
+        session.moveGradient(end: CGPoint(x: 100, y: 10))
+        session.endGradientDrag()
+        #expect(!workspace.canSwitch)
+        let count = session.history.undoCount
+        await workspace.settlePendingEdits()
+        #expect(session.gradientEdit == nil)
+        #expect(session.history.undoCount == count + 1)
+        #expect(workspace.canSwitch)
+    }
+
+    /// An open dialog used to block Quit too; quitting cancels it, leaving the layer as it was.
+    @Test func quittingCancelsAnOpenDialog() async throws {
+        let workspace = ProjectWorkspace()
+        let session = workspace.current.session
+        session.createDocument(width: 100, height: 20)
+        session.insert(try LiveMaskTests().asset([200, 100, 50, 255]))
+        let original = session.activeLayer?.asset?.image
+        for open in [{ session.beginFilter(.gaussianBlur) }, { session.beginHueSaturation() }, { session.beginLevels() }] {
+            open()
+            #expect(!workspace.canSwitch)
+            await workspace.settlePendingEdits()
+            #expect(workspace.canSwitch)
+            #expect(session.activeLayer?.asset?.image === original)
+        }
+    }
+
     @Test func layerDropProviderCopiesIntoANewProject() async throws {
         let workspace = ProjectWorkspace()
         let source = workspace.current
@@ -87,6 +121,27 @@ import Testing
         #expect(workspace.current === first)
         #expect(first.session.document?.layers.count == 2)
         #expect(workspace.tabs[1].session.document?.layers.count == 1)
+    }
+
+    @Test func moveTabReordersWithoutTouchingSelectionOrDocuments() {
+        let workspace = ProjectWorkspace()
+        let a = workspace.current
+        let b = workspace.addTab(reuseEmpty: false)
+        let c = workspace.addTab(reuseEmpty: false)
+        #expect(workspace.tabs.map(\.id) == [a.id, b.id, c.id])
+        workspace.moveTab(c.id, to: 0)
+        #expect(workspace.tabs.map(\.id) == [c.id, a.id, b.id])
+        workspace.moveTab(a.id, to: 2)
+        #expect(workspace.tabs.map(\.id) == [c.id, b.id, a.id])
+        // An out-of-range target clamps to the array's bounds instead of crashing.
+        workspace.moveTab(c.id, to: 99)
+        #expect(workspace.tabs.map(\.id) == [b.id, a.id, c.id])
+        // Moving to where a tab already is, or moving an id that isn't a tab, does nothing.
+        let unchanged = workspace.tabs.map(\.id)
+        workspace.moveTab(c.id, to: 2)
+        workspace.moveTab(UUID(), to: 0)
+        #expect(workspace.tabs.map(\.id) == unchanged)
+        #expect(workspace.current === c) // reordering is chrome — it never moves the selection
     }
 
     /// Quit asks about the project on screen first, then the others left to right.

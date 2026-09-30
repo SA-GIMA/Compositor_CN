@@ -547,6 +547,57 @@ struct CameraRawTests {
         #expect(try pixels(hidden.apply(dark)) == pixels(dark))
     }
 
+    /// The parametric curve is one smooth, rising curve with fixed ends, as Camera Raw's is: no kinks at the dividers.
+    @Test func parametricCurveIsSmooth() {
+        var curve = CameraRawCurveSettings()
+        #expect(curve.parametric(0.3) == 0.3)
+        for amounts in [(100.0, 0.0, 0.0, 0.0), (0, 100, -100, 0), (-100, 50, 100, -60)] {
+            (curve.shadows, curve.darks, curve.lights, curve.highlights) = amounts
+            let samples = (0...200).map { curve.parametric(Double($0) / 200) }
+            #expect(samples.first == 0 && samples.last == 1, "\(amounts): the ends stay black and white")
+            #expect(zip(samples, samples.dropFirst()).allSatisfy { $1 >= $0 - 1e-9 }, "\(amounts): the curve keeps rising")
+            // Smooth: sampled twice as finely, the largest step-to-step change of slope about halves. At a corner, where
+            // one region stopped dead and the next began, it stays the same however finely it's sampled.
+            func jump(_ steps: Int) -> Double {
+                let values = (0...steps).map { curve.parametric(Double($0) / Double(steps)) }
+                let slopes = zip(values, values.dropFirst()).map { ($1 - $0) * Double(steps) }
+                return zip(slopes, slopes.dropFirst()).map { abs($1 - $0) }.max() ?? 0
+            }
+            #expect(jump(400) < jump(200) * 0.7, "\(amounts): a corner in the curve")
+        }
+        curve = CameraRawCurveSettings()
+        curve.darks = 100
+        let before = curve.parametric(0.4)
+        curve.darkSplit = 70
+        #expect(curve.parametric(0.4) > before, "widening the darks region spreads its lift")
+    }
+
+    /// Darks −51 and Lights +59 give Photoshop's curve, traced from Camera Raw 18.6 at the default dividers.
+    @Test func parametricCurveMatchesPhotoshop() {
+        var curve = CameraRawCurveSettings()
+        curve.darks = -51
+        curve.lights = 59
+        let photoshop: [(Double, Double)] = [(0.093, 0.011), (0.192, 0.089), (0.267, 0.174), (0.367, 0.310), (0.491, 0.498),
+                                             (0.616, 0.698), (0.690, 0.804), (0.765, 0.886), (0.840, 0.947), (0.915, 0.982)]
+        for (tone, expected) in photoshop {
+            #expect(abs(curve.parametric(tone) - expected) < 0.035, "at \(tone): \(curve.parametric(tone)), Photoshop \(expected)")
+        }
+    }
+
+    /// Like Photoshop's, the curve works on red, green and blue alike, so an S-curve deepens an orange toward red as it
+    /// adds contrast; Refine Saturation at −100 keeps it to brightness, leaving the color's balance as it was.
+    @Test func curveDeepensColorLikePhotoshop() throws {
+        let orange = try image(red: 0.85, green: 0.35, blue: 0.1)
+        var settings = CameraRawSettings()
+        settings.curve.darks = -51
+        settings.curve.lights = 59
+        let curved = try pixels(settings.apply(orange))[0]
+        #expect(curved[0] > 230 && curved[1] < 80, "red up and green down, as Photoshop's: \(curved)")
+        settings.curve.refineSaturation = -100
+        let brightness = try pixels(settings.apply(orange))[0]
+        #expect(Double(brightness[1]) / Double(brightness[0]) > 0.35, "brightness only keeps orange orange: \(brightness)")
+    }
+
     @Test func detailSharpeningNoiseAndMaskingPreview() throws {
         let edge = try step()
         var settings = CameraRawSettings()

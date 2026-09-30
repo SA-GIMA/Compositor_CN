@@ -139,7 +139,7 @@ extension EditorSession {
         }
         guard canEditLayers, document != nil, rect.width >= 1, rect.height >= 1 else { return }
         guard Int(rect.width) * Int(rect.height) <= Self.maxShapePixels else {
-            brushError = "That shape is too large. A shape can cover up to \(DocumentLimits.maxSurfaceMegapixels) megapixels."
+            brushError = "形状过大。形状最大可覆盖 \(DocumentLimits.maxSurfaceMegapixels) 百万像素。"
             return
         }
         do {

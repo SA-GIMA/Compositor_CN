@@ -184,7 +184,7 @@ extension EditorSession {
     /// A copy of each layer (a folder with all it holds), as one undo step: Duplicate Layer, and Paste of layers Copy
     /// took whole. One copy sits just above its original; several stack together, in their order, above the topmost
     /// original, as Photoshop's do. The copies end up selected.
-    func duplicateLayers(_ ids: [UUID], editName: String = "Duplicate Layer") {
+    func duplicateLayers(_ ids: [UUID], editName: String = "复制图层") {
         guard canEditLayers, !ids.isEmpty else { return }
         let active = activeLayerID
         beginEdit(editName)

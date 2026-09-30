@@ -17,7 +17,7 @@ nonisolated enum ImageImportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unreadable: "无法读取该图像。文件可能已损坏或不可用。"
-        case .unsupported: "Choose a JPEG, PNG, HEIC, TIFF, or Photoshop (PSD) file."
+        case .unsupported: "请选择 JPEG、PNG、HEIC、TIFF 或 Photoshop（PSD）文件。"
         case .tooLarge: "This import exceeds the current \(DocumentLimits.documentBudgetMegapixels)-megapixel document budget or \(DocumentLimits.maxSide.formatted())-pixel side limit."
         }
     }

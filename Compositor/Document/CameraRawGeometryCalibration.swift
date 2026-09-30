@@ -194,17 +194,17 @@ nonisolated enum CameraRawProcessVersion: String, CaseIterable, Sendable {
     var summary: String {
         switch self {
         case .version1:
-            return "最早响应。色相、饱和度与阴影色调的偏移约为版本 6 的一半。"
+            return "Earliest response. Hue, saturation, and shadow tint move about half as far as Version 6."
         case .version2:
-            return "比版本 1 稍强。下方滑块仍明显弱于当前效果。"
+            return "A little stronger than Version 1. The sliders below still fall well short of the current look."
         case .version3:
-            return "颜色比版本 2 更扎实。原色偏移仍比当前处理更温和。"
+            return "Firmer color than Version 2. Primary shifts stay gentler than the current process."
         case .version4:
-            return "2012 年响应。校准可达到版本 6 的大部分强度。"
+            return "The 2012 response. Calibration reaches most of the strength used by Version 6."
         case .version5:
-            return "接近当前处理，原色与阴影偏移略柔和。"
+            return "Close to the current process, with slightly softer primary and shadow shifts."
         case .version6:
-            return "当前默认。下方校正滑块以全强度应用。"
+            return "Current default. The calibration sliders below apply at full strength."
         }
     }
 }

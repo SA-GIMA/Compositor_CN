@@ -42,26 +42,6 @@ nonisolated enum AdjustmentKind: String, Codable, CaseIterable, Sendable {
         }
     }
 }
-
-extension AdjustmentKind {
-    nonisolated var displayName: String {
-        switch self {
-        case .hsv: "色相/饱和度"
-        case .levels: "色阶"
-        case .curves: "曲线"
-        case .exposure: "曝光度"
-        case .gradientMap: "渐变映射"
-        case .grain: "颗粒"
-        case .addNoise: "添加杂色"
-        case .gaussianBlur: "高斯模糊"
-        case .motionBlur: "动感模糊"
-        case .invert: "反相"
-        case .blackWhite: "黑白"
-        case .colorBalance: "色彩平衡"
-        }
-    }
-}
-
 nonisolated struct LayerAdjustment: Codable, Equatable, Sendable {
     var kind: AdjustmentKind
     var hue: Double = 0
@@ -192,7 +172,9 @@ nonisolated struct LayerAdjustment: Codable, Equatable, Sendable {
             return try PixelFilter.run(FilterJob(kind: filterKind, image: image, settings: settings,
                                                   scale: scale, selection: nil, mapping: .identity,
                                                   seed: resolvedNoiseSeed,
-                                                  noiseOrigin: region?.origin ?? .zero))
+                                                  // The region's origin in the image's own pixels.
+                                                  noiseOrigin: region.map { CGPoint(x: $0.minX * CGFloat(image.width) / max(1, $0.width),
+                                                                                    y: $0.minY * CGFloat(image.height) / max(1, $0.height)) } ?? .zero))
         case .invert:
             return try PixelInvert.run(PixelInvert.Job(image: image, isMask: false,
                                                        pixelToDocument: .identity, selection: nil))
@@ -227,5 +209,24 @@ extension EditorSession {
         guard let index = document?.layers.firstIndex(where: { $0.id == id }), value.isValid else { return }
         document?.layers[index].adjustment = value
         brushRevision += 1
+    }
+}
+
+extension AdjustmentKind {
+    nonisolated var displayName: String {
+        switch self {
+        case .hsv: "色相/饱和度"
+        case .levels: "色阶"
+        case .curves: "曲线"
+        case .exposure: "曝光度"
+        case .gradientMap: "渐变映射"
+        case .grain: "颗粒"
+        case .addNoise: "添加杂色"
+        case .gaussianBlur: "高斯模糊"
+        case .motionBlur: "动感模糊"
+        case .invert: "反相"
+        case .blackWhite: "黑白"
+        case .colorBalance: "色彩平衡"
+        }
     }
 }

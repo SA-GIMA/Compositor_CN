@@ -29,32 +29,6 @@ nonisolated enum FilterKind: String, CaseIterable, Sendable {
             || self == .blackWhite || self == .colorBalance
     }
 }
-
-extension FilterKind {
-    nonisolated var displayName: String {
-        switch self {
-        case .gaussianBlur: "高斯模糊"
-        case .motionBlur: "动感模糊"
-        case .addNoise: "添加杂色"
-        case .vignette: "晕影"
-        case .bloomGlow: "辉光/发光"
-        case .dither: "抖动"
-        case .tonalContrast: "色调对比"
-        case .lensCorrection: "镜头校正"
-        case .cameraRaw: "Camera Raw 滤镜"
-        case .removeBackground: "移除背景"
-        case .contentAwareFill: "内容识别填充"
-        case .curves: "曲线"
-        case .exposure: "曝光度"
-        case .gradientMap: "渐变映射"
-        case .grain: "颗粒"
-        case .blackWhite: "黑白"
-        case .colorBalance: "色彩平衡"
-        }
-    }
-}
-
-
 /// Remove Background's two ways of working: Apple's own subject mask on its own, or that mask refined against the
 /// layer's detail, which recovers hair and fur but takes longer.
 nonisolated enum BackgroundQuality: String, CaseIterable, Sendable {
@@ -380,6 +354,11 @@ final class FilterEdit {
     /// The layer had no pixels yet (an empty layer); the filter started it from clear ones.
     @ObservationIgnored var startedEmpty = false
     @ObservationIgnored var preparedPreview: CGImage?
+    /// Where `preparedPreview` goes: the grown layer it was made from, or nil for the layer's own place. A blur grows
+    /// the layer as it gets bigger; the last preview stays up where it belongs until the next one replaces it.
+    @ObservationIgnored var preparedTransform: LayerTransform?
+    /// The grown layer `pending` is made from.
+    @ObservationIgnored var pendingTransform: LayerTransform?
     /// Reject a render started before the blur's padded pixel grid changed.
     @ObservationIgnored var previewSourceVersion: UInt64 = 0
     /// The settings `preparedPreview` was made with, for the automatic filters that have settings of their own.
@@ -549,7 +528,7 @@ extension EditorSession {
         edit.preview = preview
         // A bigger blur needs more room around the layer than it was given.
         if FilterEdit.blurMargin(edit.kind, edit.settings) > edit.grownMargin {
-            do { try edit.growForBlur(); edit.preparedPreview = nil }
+            do { try edit.growForBlur() }
             catch { brushError = error.localizedDescription }
         }
         if previewAdjustmentEditing(preview: preview) { return }
@@ -559,6 +538,7 @@ extension EditorSession {
             return
         }
         edit.pending = edit.previewJob
+        edit.pendingTransform = edit.grownTransform
         renderFilterPreview(edit)
     }
 
@@ -567,6 +547,7 @@ extension EditorSession {
     private func renderFilterPreview(_ edit: FilterEdit) {
         guard filterEdit === edit, edit.previewTask == nil, let job = edit.pending else { return }
         edit.pending = nil
+        let placement = edit.pendingTransform
         let sourceVersion = edit.previewSourceVersion
         edit.preparing = true
         edit.previewError = nil
@@ -585,13 +566,17 @@ extension EditorSession {
             guard let self, let edit, self.filterEdit === edit, !Task.isCancelled else { return }
             edit.previewTask = nil
             edit.preparing = false
-            guard sourceVersion == edit.previewSourceVersion else {
-                self.renderFilterPreview(edit)
-                return
-            }
+            // Made before the layer grew for a bigger blur: it still shows, in the place it was made for, until the
+            // render from the grown layer replaces it.
+            let current = sourceVersion == edit.previewSourceVersion
             edit.previewError = result.2
             if let scope = result.1 { edit.cameraRawScope = scope }
-            if edit.preview || edit.kind.isAutomatic { edit.preparedPreview = result.0; edit.preparedSettings = job.settings; self.brushRevision += 1 }
+            if (edit.preview || edit.kind.isAutomatic), current || !edit.kind.isAutomatic {
+                edit.preparedPreview = result.0
+                edit.preparedTransform = placement
+                edit.preparedSettings = current ? job.settings : nil
+                self.brushRevision += 1
+            }
             self.renderFilterPreview(edit)
         }
     }
@@ -717,5 +702,29 @@ extension EditorSession {
             isMaskSelected = true
             endEdit()
         } catch { brushError = error.localizedDescription }
+    }
+}
+
+extension FilterKind {
+    nonisolated var displayName: String {
+        switch self {
+        case .gaussianBlur: "高斯模糊"
+        case .motionBlur: "动感模糊"
+        case .addNoise: "添加杂色"
+        case .vignette: "晕影"
+        case .bloomGlow: "辉光/发光"
+        case .dither: "抖动"
+        case .tonalContrast: "色调对比"
+        case .lensCorrection: "镜头校正"
+        case .cameraRaw: "Camera Raw 滤镜"
+        case .removeBackground: "移除背景"
+        case .contentAwareFill: "内容识别填充"
+        case .curves: "曲线"
+        case .exposure: "曝光度"
+        case .gradientMap: "渐变映射"
+        case .grain: "颗粒"
+        case .blackWhite: "黑白"
+        case .colorBalance: "色彩平衡"
+        }
     }
 }

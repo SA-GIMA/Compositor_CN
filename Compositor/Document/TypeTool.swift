@@ -333,7 +333,7 @@ extension EditorSession {
         guard canEditLayers, textDraft == nil, rect.width.isFinite, rect.height.isFinite else { return }
         var style = textDefaults
         style.boxSize = CGSize(width: max(16, rect.width.rounded()), height: max(16, rect.height.rounded()))
-        guard style.boxIsValid else { brushError = "That text box exceeds the \(DocumentLimits.maxSide.formatted())-pixel or \(DocumentLimits.maxSurfaceMegapixels)-megapixel limit."; return }
+        guard style.boxIsValid else { brushError = "文本框超出 \(DocumentLimits.maxSide.formatted()) 像素或 \(DocumentLimits.maxSurfaceMegapixels) 百万像素上限。"; return }
         beginText(at: rect.origin, newLayer: true)
         // A dragged box is exactly where it was drawn.
         textDraft?.origin = rect.origin

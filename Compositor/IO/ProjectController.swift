@@ -111,7 +111,7 @@ final class ProjectController {
         let options: TrimOptions? = await withCheckedContinuation { continuation in
             let sheet = NSWindow()
             sheet.styleMask = [.titled, .fullSizeContentView]
-            sheet.title = "Trim"
+            sheet.title = "裁切"
             sheet.contentViewController = NSHostingController(rootView: TrimSheet { options in
                 window.endSheet(sheet)
                 sheet.orderOut(nil)
@@ -125,7 +125,7 @@ final class ProjectController {
             guard let resized = try await ImageTrim.trim(snapshot, options: options) else {
                 return
             }
-            session.applyDocumentSize(resized, actionName: "Trim")
+            session.applyDocumentSize(resized, actionName: "裁切")
         } catch { await showError("Couldn’t trim image", error: error) }
     }
 
@@ -332,7 +332,7 @@ final class ProjectController {
         alert.messageText = "Save changes to \(session.projectURL?.lastPathComponent ?? "未命名")?"
         alert.informativeText = "如果不存储，所做的更改将会丢失。"
         alert.addButton(withTitle: "存储")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "不存储")
         let response = await show(alert)
         if response == .alertFirstButtonReturn { return await saveCurrent() }

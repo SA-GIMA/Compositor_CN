@@ -4,12 +4,17 @@ struct CameraRawCurveControls: View {
     @Bindable var session: EditorSession
     private var raw: CameraRawSettings { session.filterEdit?.settings.cameraRaw ?? CameraRawSettings() }
     private var edit: FilterEdit? { session.filterEdit }
+    /// What a drag in the graph is moving, picked when it starts and kept until it ends, as Image › Curves does: a
+    /// point (by index), a divider, or a tonal region and the amount it started at.
+    private enum Drag { case point(Int), divider(Int), region(WritableKeyPath<CameraRawCurveSettings, Double>, Double) }
+    @State private var drag: Drag?
+    @State private var selected: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Picker("曲线", selection: Binding(get: { edit?.cameraRawCurvePage ?? .parametric }, set: { session.filterEdit?.cameraRawCurvePage = $0 })) {
-                ForEach(CameraRawCurvePage.allCases, id: \.self) { page in
-                    Text(page.displayName).tag(page)
+                ForEach(CameraRawCurvePage.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
                 }
             }
             .pickerStyle(.segmented)
@@ -24,12 +29,13 @@ struct CameraRawCurveControls: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .help("RGB 改变亮度。红、绿、蓝还会偏移颜色。")
+                .onChange(of: edit?.cameraRawPointChannel) { _, _ in selected = nil; drag = nil }
             }
             curveGraph
                 .frame(height: 150)
                 .help(edit?.cameraRawCurvePage == .parametric
-                      ? "Drag a divider to change which tones the neighboring sliders affect."
-                      : "Drag a point. Click the curve to add one. Double-click a point to remove it.")
+                      ? "Drag up or down to lift or lower those tones. Drag a divider along the bottom to change which tones each region covers."
+                      : "Drag a point. Click to add one. Double-click a point to remove it.")
             if edit?.cameraRawCurvePage != .point {
                 amount("Highlights", \.highlights, "Lifts or lowers the brightest tones.")
                 amount("Lights", \.lights, "Lifts or lowers the light tones.")
@@ -50,10 +56,10 @@ struct CameraRawCurveControls: View {
                 }
                 .help("用直线或对比度曲线替换当前曲线。")
                 if edit?.cameraRawPointChannel == .rgb {
-                    slider("细化饱和度", \.refineSaturation, -100...100, 0, "How much the RGB curve also changes color strength. Zero keeps it to brightness.")
+                    slider("细化饱和度", \.refineSaturation, -100...100, 0, "How much the curve also changes color strength. Zero matches Photoshop; lower keeps it to brightness, higher adds more color.")
                 }
             }
-            targetButton(armed: edit?.targetsCameraRawCurve == true, help: "Drag on the picture to move the curve for the tone under the pointer.") {
+            targetButton(armed: edit?.targetsCameraRawCurve == true, help: "在图像上拖动以调整指针下色调对应的曲线点。") {
                 session.filterEdit?.targetsCameraRawMixer = false
                 session.filterEdit?.targetsCameraRawCurve.toggle()
             }
@@ -79,21 +85,22 @@ struct CameraRawCurveControls: View {
                     }
                 } else {
                     stroke(samples: raw.curve.channelTable(currentPoints).map(Double.init), in: context, size: canvasSize)
-                    for point in currentPoints {
+                    for (index, point) in currentPoints.enumerated() {
                         let rect = CGRect(x: CGFloat(point.x) * canvasSize.width - 4, y: CGFloat(1 - point.y) * canvasSize.height - 4, width: 8, height: 8)
-                        context.fill(Path(ellipseIn: rect), with: .color(.white))
+                        context.fill(Path(ellipseIn: rect), with: .color(selected == index ? .accentColor : .white))
                     }
                 }
             }
-            .gesture(DragGesture(minimumDistance: 0).onEnded { value in
-                guard edit?.cameraRawCurvePage == .point, value.translation == .zero else { return }
-                addPoint(at: value.location, in: size)
-            })
-            .gesture(DragGesture(minimumDistance: 2).onChanged { value in
-                if edit?.cameraRawCurvePage == .parametric { moveDivider(at: value.location.x, in: size.width) }
-                else { movePoint(at: value.location, in: size) }
-            })
-            .onTapGesture(count: 2) { }
+            .contentShape(Rectangle())
+            // One drag does everything, as in Image › Curves: two separate drags left the second never firing, so
+            // nothing could be dragged, and picking the nearest point afresh at every step jumped between points.
+            .gesture(DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    if drag == nil { drag = edit?.cameraRawCurvePage == .parametric ? parametricDrag(at: value.startLocation, in: size)
+                                                                                     : pointDrag(at: value.startLocation, in: size) }
+                    continueDrag(value, in: size)
+                }
+                .onEnded { _ in drag = nil })
             .simultaneousGesture(SpatialTapGesture(count: 2).onEnded { value in
                 guard edit?.cameraRawCurvePage == .point else { return }
                 removePoint(at: value.location, in: size)
@@ -112,7 +119,7 @@ struct CameraRawCurveControls: View {
         }
     }
 
-    private var selectedPoint: CurvePoint? { currentPoints.dropFirst().dropLast().last ?? currentPoints.last }
+    private var selectedPoint: CurvePoint? { selected.flatMap { currentPoints.indices.contains($0) ? currentPoints[$0] : nil } }
 
     private func amount(_ title: String, _ key: WritableKeyPath<CameraRawCurveSettings, Double>, _ help: String) -> some View {
         slider(title, key, -100...100, 0, help)
@@ -142,31 +149,60 @@ struct CameraRawCurveControls: View {
         context.stroke(path, with: .color(.white), lineWidth: 1.5)
     }
 
-    private func moveDivider(at x: CGFloat, in width: CGFloat) {
-        let value = min(98, max(2, Double(x / max(width, 1)) * 100))
+    /// Parametric: pressing along the bottom takes the nearest divider; anywhere else, the tonal region under the pointer,
+    /// raised or lowered as the pointer moves up or down, as Camera Raw's does.
+    private func parametricDrag(at start: CGPoint, in size: CGSize) -> Drag {
+        let tone = Double(start.x / max(size.width, 1)) * 100
         let splits = [raw.curve.shadowSplit, raw.curve.darkSplit, raw.curve.lightSplit]
-        let nearest = splits.enumerated().min { abs($0.element - value) < abs($1.element - value) }?.offset ?? 0
-        update {
-            if nearest == 0 { $0.curve.shadowSplit = value }
-            else if nearest == 1 { $0.curve.darkSplit = value }
-            else { $0.curve.lightSplit = value }
+        if start.y > size.height - 18 {
+            return .divider(splits.indices.min { abs(splits[$0] - tone) < abs(splits[$1] - tone) } ?? 0)
         }
+        let key: WritableKeyPath<CameraRawCurveSettings, Double> = tone < splits[0] ? \.shadows : tone < splits[1] ? \.darks
+            : tone < splits[2] ? \.lights : \.highlights
+        return .region(key, raw.curve[keyPath: key])
     }
 
-    private func addPoint(at location: CGPoint, in size: CGSize) {
+    /// Point: pressing on a point takes it; anywhere else adds one there and takes that.
+    private func pointDrag(at start: CGPoint, in size: CGSize) -> Drag? {
+        let x = Double(start.x / max(size.width, 1)), y = 1 - Double(start.y / max(size.height, 1))
         var points = currentPoints
-        let point = CurvePoint(x: min(0.99, max(0.01, location.x / size.width)), y: min(1, max(0, 1 - location.y / size.height)))
+        let near = points.indices.min { hypot(points[$0].x - x, points[$0].y - y) < hypot(points[$1].x - x, points[$1].y - y) }
+        if let near, hypot(points[near].x - x, points[near].y - y) < 0.055 { selected = near; return .point(near) }
+        guard points.count < 16, x > 0.01, x < 0.99, points.allSatisfy({ abs($0.x - x) > 0.01 }) else { return nil }
+        let point = CurvePoint(x: x, y: min(1, max(0, y)))
         points.append(point)
+        points.sort { $0.x < $1.x }
         store(points)
+        let index = points.firstIndex(of: point)
+        selected = index
+        return index.map { .point($0) }
     }
 
-    private func movePoint(at location: CGPoint, in size: CGSize) {
-        var points = currentPoints
-        let x = location.x / size.width
-        guard let index = points.indices.dropFirst().dropLast().min(by: { abs(points[$0].x - x) < abs(points[$1].x - x) }) else { return }
-        points[index].x = min(0.98, max(0.02, x))
-        points[index].y = min(1, max(0, 1 - location.y / size.height))
-        store(points)
+    private func continueDrag(_ value: DragGesture.Value, in size: CGSize) {
+        let x = Double(value.location.x / max(size.width, 1)), y = 1 - Double(value.location.y / max(size.height, 1))
+        switch drag {
+        case .point(let index):
+            var points = currentPoints
+            guard points.indices.contains(index) else { return }
+            points[index].y = min(1, max(0, y))
+            // The ends stay at the ends; the rest keep their order.
+            if index > 0, index < points.count - 1 { points[index].x = min(points[index + 1].x - 0.01, max(points[index - 1].x + 0.01, x)) }
+            store(points)
+        case .divider(let index):
+            let value = min(98, max(2, x * 100))
+            update {
+                // Dividers keep their order: shadows before darks before lights.
+                switch index {
+                case 0: $0.curve.shadowSplit = min(value, $0.curve.darkSplit - 2)
+                case 1: $0.curve.darkSplit = min($0.curve.lightSplit - 2, max($0.curve.shadowSplit + 2, value))
+                default: $0.curve.lightSplit = max(value, $0.curve.darkSplit + 2)
+                }
+            }
+        case .region(let key, let start):
+            let amount = min(100, max(-100, start - Double(value.translation.height / max(size.height, 1)) * 200))
+            update { $0.curve[keyPath: key] = amount.rounded() }
+        case nil: break
+        }
     }
 
     private func removePoint(at location: CGPoint, in size: CGSize) {
@@ -175,6 +211,7 @@ struct CameraRawCurveControls: View {
         guard let index = points.indices.dropFirst().dropLast().min(by: { abs(points[$0].x - x) < abs(points[$1].x - x) }),
               abs(points[index].x - x) < 0.04 else { return }
         points.remove(at: index)
+        selected = nil
         store(points)
     }
 
@@ -230,12 +267,17 @@ struct CameraRawMixerControls: View {
     @Bindable var session: EditorSession
     private var raw: CameraRawSettings { session.filterEdit?.settings.cameraRaw ?? CameraRawSettings() }
     private var edit: FilterEdit? { session.filterEdit }
+    /// What a drag in the graph is moving, picked when it starts and kept until it ends, as Image › Curves does: a
+    /// point (by index), a divider, or a tonal region and the amount it started at.
+    private enum Drag { case point(Int), divider(Int), region(WritableKeyPath<CameraRawCurveSettings, Double>, Double) }
+    @State private var drag: Drag?
+    @State private var selected: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Picker("混色器", selection: Binding(get: { edit?.cameraRawMixerPage ?? .hsl }, set: { session.filterEdit?.cameraRawMixerPage = $0 })) {
-                ForEach(CameraRawMixerPage.allCases, id: \.self) { page in
-                    Text(page.displayName).tag(page)
+                ForEach(CameraRawMixerPage.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
                 }
             }
             .pickerStyle(.segmented)
@@ -399,8 +441,8 @@ struct CameraRawGradingControls: View {
             // Five segments spelled out want 453 points and the docked panel has 374, so the
             // choice is a menu rather than a row that runs past the panel's edge.
             Picker("分级", selection: Binding(get: { page }, set: { session.filterEdit?.cameraRawGradePage = $0 })) {
-                ForEach(CameraRawGradePage.allCases, id: \.self) { page in
-                    Text(page.displayName).tag(page)
+                ForEach(CameraRawGradePage.allCases, id: \.self) { item in
+                    Text(item.displayName).tag(item)
                 }
             }
             .pickerStyle(.menu)

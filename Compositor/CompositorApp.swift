@@ -38,9 +38,9 @@ struct CompositorApp: App {
                         }
                             .configuredKeyboardShortcut("z", modifiers: [.command, .shift])
                     } else {
-                        Button(session.history.canUndo ? "撤销\(session.history.undoName)" : "Undo") { session.undo() }
+                        Button(session.history.canUndo ? "撤销\(session.history.undoName)" : "撤销") { session.undo() }
                             .configuredKeyboardShortcut("z").disabled(!session.canUndo)
-                        Button(session.history.canRedo ? "重做\(session.history.redoName)" : "Redo") { session.redo() }
+                        Button(session.history.canRedo ? "重做\(session.history.redoName)" : "重做") { session.redo() }
                             .configuredKeyboardShortcut("z", modifiers: [.command, .shift]).disabled(!session.canRedo)
                     }
                 }
@@ -260,7 +260,7 @@ struct CompositorApp: App {
                         Button("\(kind.displayName)…") { session.beginFilter(kind) }
                             .disabled(!session.canAdjustColors || session.hueSaturation != nil)
                     }
-                    Button(session.isMaskSelected ? "反相蒙版" : "Invert") { Task { await session.invertPixels() } }
+                    Button(session.isMaskSelected ? "反相蒙版" : "反相") { Task { await session.invertPixels() } }
                         .configuredKeyboardShortcut("i")
                         .disabled(!session.canInvert)
                     Divider()
@@ -309,6 +309,8 @@ struct CompositorApp: App {
                     Divider()
                     Button("编组所选图层") { session.groupSelectedLayers() }
                         .configuredKeyboardShortcut("g").disabled(!session.canEditLayers)
+                    Button("取消编组") { session.ungroupLayers() }
+                        .configuredKeyboardShortcut("g", modifiers: [.command, .shift]).disabled(!session.canUngroupLayers)
                     Button("移出文件夹") { session.moveActiveLayerOutOfGroup() }
                         .disabled(!session.canEditLayers || session.activeLayer?.parentID == nil)
                     Button("新建空白图层") { session.addBlankLayer() }

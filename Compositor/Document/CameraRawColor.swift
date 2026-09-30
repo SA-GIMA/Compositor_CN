@@ -1,6 +1,7 @@
 import AppKit
 
 nonisolated enum CameraRawCurvePage: String, CaseIterable, Sendable { case parametric = "Parametric", point = "Point" }
+
 nonisolated enum CameraRawPointChannel: String, CaseIterable, Sendable { case rgb = "RGB", red = "Red", green = "Green", blue = "Blue" }
 nonisolated enum CameraRawMixerPage: String, CaseIterable, Sendable { case hsl = "HSL", color = "Color", point = "Point Color" }
 nonisolated enum CameraRawMixerTab: String, CaseIterable, Sendable { case hue = "Hue", saturation = "Saturation", luminance = "Luminance" }
@@ -45,20 +46,35 @@ nonisolated struct CameraRawCurveSettings: Equatable, Sendable {
         points.count == 2 && points[0].x == 0 && points[0].y == 0 && points[1].x == 1 && points[1].y == 1
     }
 
-    /// Lifts or lowers the region a tone belongs to. Dividers are fractions of the tonal range.
+    /// Camera Raw's parametric curve, matched to Photoshop's: Darks bends the whole range below the middle divider and
+    /// Lights the whole range above it, Shadows and Highlights just the ranges past the outer dividers. Each bend is a
+    /// gamma curve across its range, which keeps the curve rising however far the sliders go, and the result is run
+    /// through the same smooth curve as Image › Curves so the halves meet without a corner. Dividers are percentages.
     func parametric(_ tone: Double) -> Double {
-        let shadow = shadowSplit / 100, dark = darkSplit / 100, light = lightSplit / 100
-        let (amount, lo, hi): (Double, Double, Double)
-        if tone < shadow { (amount, lo, hi) = (shadows, 0, shadow) }
-        else if tone < dark { (amount, lo, hi) = (darks, shadow, dark) }
-        else if tone < light { (amount, lo, hi) = (lights, dark, light) }
-        else { (amount, lo, hi) = (highlights, light, 1) }
-        let span = max(0.02, hi - lo)
-        let weight = 1 - abs(tone - (lo + hi) / 2) / (span / 2)
-        return min(1, max(0, tone + (amount / 100) * max(0, weight) * 0.22))
+        guard shadows != 0 || darks != 0 || lights != 0 || highlights != 0 else { return tone }
+        let anchors = (0...32).map { index -> CurvePoint in
+            let x = Double(index) / 32
+            return CurvePoint(x: x, y: Self.bend(Self.bend(x, lower: shadowSplit / 100, shadows, upper: lightSplit / 100, highlights),
+                                                 lower: darkSplit / 100, darks, upper: darkSplit / 100, lights))
+        }
+        return point(tone, anchors)
     }
 
-    func lumaTable() -> [Float] { (0...255).map { Float(point(parametric(Double($0) / 255), rgb)) } }
+    /// Bends the tones below `lower` by `low` and above `upper` by `high` (−100…100), leaving black, white and the
+    /// dividers in place. Fitted to Photoshop: Darks −51 dips the curve about 0.1 at a quarter of the way up.
+    private static func bend(_ tone: Double, lower: Double, _ low: Double, upper: Double, _ high: Double) -> Double {
+        let strength = 1.66
+        if tone < lower, lower > 0 {
+            return lower * pow(tone / lower, pow(2, -low / 100 * strength))
+        }
+        if tone > upper, upper < 1 {
+            let rest = 1 - upper
+            return 1 - rest * pow((1 - tone) / rest, pow(2, high / 100 * strength))
+        }
+        return tone
+    }
+
+    func toneTable() -> [Float] { (0...255).map { Float(point(parametric(Double($0) / 255), rgb)) } }
     func channelTable(_ points: [CurvePoint]) -> [Float] { (0...255).map { Float(point(Double($0) / 255, points)) } }
 
     func nudged(_ channel: CameraRawPointChannel, near tone: Double, by delta: Double) -> Self {
@@ -252,14 +268,14 @@ nonisolated extension CameraRawSettings {
         let curve = curve.normalized
         let mixer = mixer.normalized
         let grading = grading.normalized
-        let luma = curve.lumaTable()
+        let tone = curve.toneTable()
         let red = curve.channelTable(curve.red)
         let green = curve.channelTable(curve.green)
         let blue = curve.channelTable(curve.blue)
         let mixerFloats = mixer.mixerFloats
         let pointFloats = mixer.pointFloats
         let grade = grading.gradeFloats
-        luma.withUnsafeBufferPointer { lumaP in
+        tone.withUnsafeBufferPointer { toneP in
             red.withUnsafeBufferPointer { redP in
                 green.withUnsafeBufferPointer { greenP in
                     blue.withUnsafeBufferPointer { blueP in
@@ -267,7 +283,7 @@ nonisolated extension CameraRawSettings {
                             pointFloats.withUnsafeBufferPointer { pointP in
                                 grade.withUnsafeBufferPointer { gradeP in
                                     adjust_camera_raw_curve_color(pixels, width, height, stride,
-                                                                  lumaP.baseAddress, redP.baseAddress, greenP.baseAddress, blueP.baseAddress,
+                                                                  toneP.baseAddress, redP.baseAddress, greenP.baseAddress, blueP.baseAddress,
                                                                   curve.refineSaturation / 100, mixerP.baseAddress,
                                                                   Int32(mixer.points.count), pointP.baseAddress,
                                                                   gradeP.baseAddress, grading.blending / 100, grading.balance / 100, Int32(visualize))
@@ -312,16 +328,6 @@ extension CameraRawGradePage {
     }
 }
 
-extension CameraRawMixerTab {
-    nonisolated var displayName: String {
-        switch self {
-        case .hue: "色相"
-        case .saturation: "饱和度"
-        case .luminance: "明度"
-        }
-    }
-}
-
 extension CameraRawPointChannel {
     nonisolated var displayName: String {
         switch self {
@@ -329,6 +335,16 @@ extension CameraRawPointChannel {
         case .red: "红"
         case .green: "绿"
         case .blue: "蓝"
+        }
+    }
+}
+
+extension CameraRawMixerTab {
+    nonisolated var displayName: String {
+        switch self {
+        case .hue: "色相"
+        case .saturation: "饱和度"
+        case .luminance: "明度"
         }
     }
 }

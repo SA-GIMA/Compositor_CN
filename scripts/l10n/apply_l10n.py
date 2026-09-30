@@ -43,7 +43,6 @@ extension FilterKind {
         case .grain: "颗粒"
         case .blackWhite: "黑白"
         case .colorBalance: "色彩平衡"
-case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -110,7 +109,6 @@ extension AdjustmentKind {
         case .invert: "反相"
         case .blackWhite: "黑白"
         case .colorBalance: "色彩平衡"
-case .colorBalance: "色彩平衡"
         }
     }
 }
@@ -239,7 +237,6 @@ extension LayerEffectKind {
         case .innerShadow: "内阴影"
         case .outerGlow: "外发光"
         case .innerGlow: "内发光"
-case .outerGlow: "外发光"
         }
     }
 }
@@ -509,6 +506,7 @@ extension DitherStyle {
         case .diamonds: "半调菱形"
         case .patterns: "Mac 图案"
         case .ascii: "ASCII"
+        case .scanlines: "扫描线（CRT）"
         }
     }
 }
@@ -1069,12 +1067,40 @@ def _is_file_scope(text: str, idx: int) -> bool:
     return text[:idx].count("{") == text[:idx].count("}")
 
 
+def split_extension_blocks(code: str) -> list[str]:
+    """Split a multi-extension template into individual extension blocks."""
+    text = code.strip()
+    if not text:
+        return []
+    parts: list[str] = []
+    matches = list(re.finditer(r"(?:^|\n)(extension\s+[\w.]+\s*\{)", text))
+    if not matches:
+        return [text]
+    for i, m in enumerate(matches):
+        start = m.start(1)
+        end = matches[i + 1].start(1) if i + 1 < len(matches) else len(text)
+        chunk = text[start:end].strip()
+        if chunk:
+            parts.append(chunk)
+    return parts
+
+
 def inject_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
-    """Inject or replace the displayName extension for the enum named in enum_sig.
+    """Inject or replace displayName extensions.
 
     Nested enums (e.g. EditorSession.SelectionAmountOperation) must get their
     extension at file scope — Swift forbids extensions inside another type.
+    Multi-extension templates are applied one block at a time so re-runs stay
+    idempotent (no duplicate extension redeclarations).
     """
+    changed = False
+    for block in split_extension_blocks(extension_code):
+        if _inject_one_extension(path, enum_sig, block):
+            changed = True
+    return changed
+
+
+def _inject_one_extension(path: Path, enum_sig: str, extension_code: str) -> bool:
     text = path.read_text(encoding="utf-8")
     name_match = re.search(r"enum\s+(\w+)", enum_sig)
     if not name_match:

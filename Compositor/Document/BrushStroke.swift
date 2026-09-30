@@ -28,6 +28,8 @@ nonisolated struct BrushSettings: Sendable {
     /// 0–100. The brush trails the pointer on a string of this length, so a shaky hand
     /// draws a smooth line; 0 follows the pointer exactly.
     var smoothing: CGFloat = 0
+    /// Blur: how far it softens, in canvas pixels, whatever the brush's size. Strength sets how much.
+    var blurRadius: CGFloat = 5
     /// Spot-healing uses nearby source pixels instead of the foreground color.
     /// Erase: the stroke clears the layer's pixels instead of painting color on them.
     var erasing = false
@@ -51,6 +53,34 @@ nonisolated enum BrushRaster {
         result.scaleBy(x: 1, y: -1)
         return result
     }
+    /// A color context holding `image`'s pixels. An image already in this layout (one made from such a context)
+    /// is copied byte for byte, several times quicker than drawing it.
+    static func copy(_ image: CGImage) throws -> CGContext {
+        let context = try Self.context(width: image.width, height: image.height, mask: false)
+        guard image.bitsPerPixel == 32, image.bitsPerComponent == 8, image.bitmapInfo == context.bitmapInfo,
+              image.colorSpace == context.colorSpace, let source = image.dataProvider?.data,
+              let bytes = CFDataGetBytePtr(source), let target = context.data,
+              CFDataGetLength(source) >= image.bytesPerRow * (image.height - 1) + image.width * 4 else {
+            draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height), mask: false, context: context)
+            return context
+        }
+        let row = image.width * 4
+        for y in 0..<image.height {
+            memcpy(target + y * context.bytesPerRow, bytes + y * image.bytesPerRow, row)
+        }
+        return context
+    }
+
+    /// Runs `body` over `count` pixels in a few bands at once, each a (start, length) of whole pixels.
+    static func inBands(count: Int, _ body: (Int, Int) -> Void) {
+        let bands = count < 250_000 ? 1 : ProcessInfo.processInfo.activeProcessorCount * 2
+        let size = (count + bands - 1) / bands
+        DispatchQueue.concurrentPerform(iterations: bands) { band in
+            let start = band * size
+            if start < count { body(start, min(size, count - start)) }
+        }
+    }
+
     static func draw(_ image: CGImage, in rect: CGRect, mask: Bool, context: CGContext) {
         context.saveGState()
         context.interpolationQuality = .none
@@ -123,11 +153,23 @@ final class BrushStroke {
     private let gridTip: CGImage?
     /// Past this width the tip is left to the fallback rather than held in memory.
     private static let gridTipLimit: CGFloat = 3000
+    /// The options bar stops Size at 2000; strokes the app lays itself, such as committing a Smudge or Liquify at that
+    /// size, run a little wider.
+    static let maxDiameter: CGFloat = 2100
     var pixelLimit = DocumentLimits.documentPixelBudget
     /// Limits every edit to the document selection; nil when nothing is selected.
     var selectionClip: SelectionClip?
-    /// Clone Stamp: a document-size image to copy from, and the offset from each painted point to its source.
-    var clone: (image: CGImage, offset: CGSize)?
+    /// Clone Stamp, Blur, Smudge and Liquify: an image painted through the tip, and where it sits, already shifted
+    /// by any source offset. Either in document pixels (a composite of the canvas, at document size) or, `inGrid`,
+    /// in the stroke's own pixel grid: the layer's own pixels at their own resolution, so a layer scaled down and
+    /// painted keeps its detail when it's scaled back up.
+    var clone: (image: CGImage, placed: CGRect, inGrid: Bool)? { didSet { clonePieces = [:] } }
+    /// Makes part of `clone`'s image, given a rect of its pixels (top-left rows), in place of cropping it: Blur softens
+    /// the layer a piece at a time as the brush first reaches it, rather than all of it before the first dab.
+    var cloneRender: ((CGRect) -> CGImage?)? { didSet { clonePieces = [:] } }
+    /// The part of `clone` each tile draws, cut once: drawing the whole sample into every tile the brush touched,
+    /// a 25-megapixel image drawn dozens of times per mouse move, is what made big strokes crawl.
+    private var clonePieces: [Int: (image: CGImage, placed: CGRect)] = [:]
     /// A Blur stroke: `clone` holds the layer blurred, painted in place through the tip.
     var isBlur = false
     /// The clone sample replaces what's under the tip rather than drawing over it, so it can also clear pixels.
@@ -191,7 +233,7 @@ final class BrushStroke {
         paintTransform = expanded
         guard (1...1_000_000_000).contains(width), (1...1_000_000_000).contains(height),
               (1...DocumentLimits.maxSide).contains(originalWidth), (1...DocumentLimits.maxSide).contains(originalHeight),
-              settings.diameter.isFinite, (1...2000).contains(settings.diameter),
+              settings.diameter.isFinite, (1...Self.maxDiameter).contains(settings.diameter),
               settings.hardness.isFinite, (0...1).contains(settings.hardness),
               settings.opacity.isFinite, (0.01...1).contains(settings.opacity) else { throw ProjectError.tooLarge }
         let space = mask ? CGColorSpaceCreateDeviceGray() : CGColorSpace(name: CGColorSpace.sRGB)!
@@ -209,8 +251,11 @@ final class BrushStroke {
         let gridDiameter = settings.diameter / scaleX
         gridTip = gpu == nil && square && gridDiameter >= 1 && gridDiameter <= Self.gridTipLimit
             ? try Self.tip(diameter: gridDiameter, hardness: settings.hardness, falloff: falloff) : nil
-        stamp = gpu == nil && gridTip == nil && settings.diameter <= Self.stampLimit
-            ? try Self.tip(diameter: settings.diameter, hardness: settings.hardness, falloff: falloff) : nil
+        // Drawn through the tile transform, the stamp is rendered as finely as the layer's pixels: magnified onto
+        // the finer grid of a scaled-down layer, it left blocky dabs that showed once the layer was scaled back up.
+        let stampDiameter = settings.diameter / min(1, scaleX, scaleY)
+        stamp = gpu == nil && gridTip == nil && stampDiameter <= Self.stampLimit
+            ? try Self.tip(diameter: stampDiameter, hardness: settings.hardness, falloff: falloff) : nil
     }
 
     /// The tip as grayscale coverage: white at full strength, fading to black at the rim.
@@ -471,26 +516,28 @@ final class BrushStroke {
                 }
                 if let clone, !isMask || isBlur {
                     // Clone Stamp: the sample, shifted by the source offset, painted through the coverage.
-                    let context = tile.context
-                    context.saveGState()
-                    // Image masks draw bottom-up; flip so the coverage lines up with the tile.
-                    context.translateBy(x: 0, y: local.height)
-                    context.scaleBy(x: 1, y: -1)
-                    context.clip(to: local, mask: mask)
-                    context.scaleBy(x: 1, y: -1)
-                    context.translateBy(x: 0, y: -local.height)
-                    context.setAlpha(settings.opacity)
-                    if replacesWithClone { context.setBlendMode(.copy) }
-                    context.interpolationQuality = .medium
-                    // Into document coordinates, where the sample lives.
-                    context.translateBy(x: -tile.rect.minX, y: -tile.rect.minY)
-                    context.concatenate(pixelToDocument.inverted())
-                    let placed = CGRect(x: -clone.offset.width, y: -clone.offset.height,
-                                        width: CGFloat(clone.image.width), height: CGFloat(clone.image.height))
-                    context.translateBy(x: placed.minX, y: placed.maxY)
-                    context.scaleBy(x: 1, y: -1)
-                    context.draw(clone.image, in: CGRect(origin: .zero, size: placed.size))
-                    context.restoreGState()
+                    // Where the sample doesn't reach, there's nothing to paint.
+                    if let piece = clonePiece(key, tile: tile.rect, clone: clone) {
+                        let context = tile.context
+                        context.saveGState()
+                        // Image masks draw bottom-up; flip so the coverage lines up with the tile.
+                        context.translateBy(x: 0, y: local.height)
+                        context.scaleBy(x: 1, y: -1)
+                        context.clip(to: local, mask: mask)
+                        context.scaleBy(x: 1, y: -1)
+                        context.translateBy(x: 0, y: -local.height)
+                        context.setAlpha(settings.opacity)
+                        if replacesWithClone { context.setBlendMode(.copy) }
+                        context.interpolationQuality = .medium
+                        // Into the space the sample lives in: the stroke's grid, or document coordinates.
+                        context.translateBy(x: -tile.rect.minX, y: -tile.rect.minY)
+                        if !clone.inGrid { context.concatenate(pixelToDocument.inverted()) }
+                        let placed = piece.placed
+                        context.translateBy(x: placed.minX, y: placed.maxY)
+                        context.scaleBy(x: 1, y: -1)
+                        context.draw(piece.image, in: CGRect(origin: .zero, size: placed.size))
+                        context.restoreGState()
+                    }
                 } else if settings.healing, !isMask {
                     // While painting, the area to heal shows as a dark wash, as in Photoshop;
                     // `heal()` rebuilds it from its surroundings when the stroke ends.
@@ -512,6 +559,26 @@ final class BrushStroke {
                 dirtyDocumentRect = dirtyDocumentRect.map { $0.union(rect) } ?? rect
             }
         }
+    }
+
+    /// The part of the clone sample under a tile, with a couple of pixels' margin so it's resampled at its edges just as
+    /// the whole sample was, and where that part sits. Nil when the sample doesn't reach the tile.
+    private func clonePiece(_ key: Int, tile: CGRect, clone: (image: CGImage, placed: CGRect, inGrid: Bool)) -> (image: CGImage, placed: CGRect)? {
+        if let piece = clonePieces[key] { return piece }
+        let placed = clone.placed
+        guard placed.width > 0, placed.height > 0 else { return nil }
+        let area = clone.inGrid ? tile : tile.applying(pixelToDocument)
+        let scaleX = CGFloat(clone.image.width) / placed.width, scaleY = CGFloat(clone.image.height) / placed.height
+        let pixels = CGRect(x: (area.minX - placed.minX) * scaleX, y: (area.minY - placed.minY) * scaleY,
+                            width: area.width * scaleX, height: area.height * scaleY)
+            .insetBy(dx: -2, dy: -2).integral
+            .intersection(CGRect(x: 0, y: 0, width: clone.image.width, height: clone.image.height))
+        guard !pixels.isNull, !pixels.isEmpty,
+              let image = cloneRender.map({ $0(pixels) }) ?? clone.image.cropping(to: pixels) else { return nil }
+        let piece = (image, CGRect(x: placed.minX + pixels.minX / scaleX, y: placed.minY + pixels.minY / scaleY,
+                                   width: pixels.width / scaleX, height: pixels.height / scaleY))
+        clonePieces[key] = piece
+        return piece
     }
 
     private static let eraseColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
@@ -701,7 +768,12 @@ final class BrushStroke {
     // MARK: Moving selected pixels
 
     /// Selected image pixels cut out of the layer, in layer pixel coordinates.
-    private var lifted: (image: CGImage, rect: CGRect)?
+    private(set) var lifted: (image: CGImage, rect: CGRect)?
+    /// The layer's own pixels (at `sourceRect`) with the selection cut out, made once as the pixels are lifted: the GPU
+    /// canvas draws a move as this with the lifted pixels over it, rather than rebuilding tiles as the pointer moves.
+    private(set) var holed: CGImage?
+    /// The layer's own pixels, for a duplicating move, which leaves them all in place.
+    var original: CGImage? { source }
     private var moveTiles = Set<Int>()
 
     /// Cuts the selected pixels out of the original image. False when nothing is lifted.
@@ -719,17 +791,32 @@ final class BrushStroke {
         BrushRaster.draw(source, in: sourceRect.offsetBy(dx: -region.minX, dy: -region.minY), mask: false, context: context)
         guard let image = context.makeImage() else { throw ExportError.render }
         lifted = (image, region)
+        let rest = try BrushRaster.context(width: Int(sourceRect.width), height: Int(sourceRect.height), mask: false)
+        BrushRaster.draw(source, in: CGRect(origin: .zero, size: sourceRect.size), mask: false, context: rest)
+        rest.translateBy(x: -sourceRect.minX, y: -sourceRect.minY)
+        rest.concatenate(inverse)
+        selectionClip.apply(to: rest)
+        rest.setBlendMode(.destinationOut)
+        rest.setFillColor(gray: 0, alpha: 1)
+        rest.fill(selectionClip.rect)
+        holed = rest.makeImage()
         return true
+    }
+
+    /// Where the lifted pixels land, in layer pixel coordinates, moved `offset` document pixels.
+    func liftedTarget(offset: CGSize) -> CGRect? {
+        guard let lifted else { return nil }
+        let inverse = pixelToDocument.inverted()
+        let zero = CGPoint.zero.applying(inverse)
+        let moved = CGPoint(x: offset.width, y: offset.height).applying(inverse)
+        return lifted.rect.offsetBy(dx: moved.x - zero.x, dy: moved.y - zero.y)
     }
 
     /// Rebuilds the affected tiles from the original: the selection becomes a transparent
     /// hole and the lifted pixels are placed `offset` document pixels away.
     func moveLifted(by offset: CGSize, duplicate: Bool = false) throws {
-        guard let lifted, let selectionClip else { return }
+        guard let lifted, let selectionClip, let target = liftedTarget(offset: offset) else { return }
         let inverse = pixelToDocument.inverted()
-        let zero = CGPoint.zero.applying(inverse)
-        let moved = CGPoint(x: offset.width, y: offset.height).applying(inverse)
-        let target = lifted.rect.offsetBy(dx: moved.x - zero.x, dy: moved.y - zero.y)
         let whole = target.minX == target.minX.rounded() && target.minY == target.minY.rounded()
         let needed = lifted.rect.union(target).integral.intersection(CGRect(x: 0, y: 0, width: width, height: height))
         var keys = moveTiles
@@ -774,6 +861,12 @@ final class BrushStroke {
     let maskBackground: CGFloat
     var committedBounds: CGRect { (allocatedBounds ?? sourceRect).integral }
     var committedTransform: LayerTransform { transform(for: committedBounds) }
+    /// Where `rect` of the stroke's grid sits to be copied from `offset` document pixels away: the offset carried
+    /// into the grid, turned, scaled and flipped as the layer is.
+    func gridRect(_ rect: CGRect, copyingFrom offset: CGSize) -> CGRect {
+        let shift = offset.applying(pixelToDocument.inverted())
+        return rect.offsetBy(dx: -shift.width, dy: -shift.height)
+    }
     func transform(for bounds: CGRect) -> LayerTransform {
         let center = CGPoint(x: bounds.midX, y: bounds.midY).applying(pixelToDocument)
         var result = paintTransform

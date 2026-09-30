@@ -40,10 +40,10 @@ struct JPEGExportSheet: View {
                     .help("显示整幅图像（⌘0）")
                 Button { zoomBy(1) } label: { Image(systemName: "plus.magnifyingglass") }
                     .disabled(JPEGPreview.step(from: shownZoom, in: 1) == nil)
-                    .help("Zoom in (⌘+), now \(percent). At 100% each pixel of the JPEG is one pixel of the screen, as on the canvas")
+                    .help("放大（⌘+），当前 \(percent)。100% 时 JPEG 每一像素对应屏幕一像素，与画布相同")
                 Button { zoomBy(-1) } label: { Image(systemName: "minus.magnifyingglass") }
                     .disabled(JPEGPreview.step(from: shownZoom, in: -1) == nil)
-                    .help("Zoom out (⌘−), now \(percent)")
+                    .help("缩小（⌘−），当前 \(percent)")
             }
             // Closer to the title row than the rest of the dialog's spacing.
             .padding(.bottom, -8)

@@ -157,7 +157,7 @@ struct ImageSizeSheet: View {
                 Text("仅打印尺寸与分辨率会变化。像素保持不变。")
                     .font(.callout).foregroundStyle(.secondary)
             }
-            Text(valid ? "Result: \(Int(width.rounded())) × \(Int(height.rounded())) pixels" : "Use 1–\(DocumentLimits.maxSide.formatted()) pixels per side, up to \(DocumentLimits.maxSurfaceMegapixels) megapixels, and 1–9,600 pixels/inch.")
+            Text(valid ? "结果：\(Int(width.rounded())) × \(Int(height.rounded())) 像素" : "请使用 1–\(DocumentLimits.maxSide.formatted()) 像素/边，最大 \(DocumentLimits.maxSurfaceMegapixels) 百万像素，分辨率 1–9,600 像素/英寸。")
                 .foregroundStyle(valid ? Color.secondary : Color.orange).font(.callout)
             HStack {
                 Button("取消") { finish(nil) }.configuredNativeShortcut(.escape)

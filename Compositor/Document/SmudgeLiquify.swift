@@ -49,13 +49,25 @@ final class WarpStroke {
     private let pixels: UnsafeMutablePointer<UInt8>
     /// Every dab's center, for painting the result into the layer.
     private(set) var points: [CGPoint] = []
-    private(set) var image: CGImage?
+    /// The working copy on the GPU, where the dabs run when there is one (see MetalWarp).
+    let gpu: MetalWarp?
+    private var cpuImage: CGImage?
+    /// The working copy as an image, fetched from the GPU the first time it's asked for after a dab.
+    var image: CGImage? {
+        guard let gpu else { return cpuImage }
+        if cpuImage == nil {
+            gpu.read(into: context)
+            cpuImage = context.makeImage()
+        }
+        return cpuImage
+    }
     private var last: CGPoint?
     /// Smudge: the color the brush carries, a (2r+1)² RGBA square.
     private var carried: [Float] = []
     private var scratch: [Float] = []
 
-    init(layer: ImageLayer, image: CGImage, transform: LayerTransform, canvas: CGSize, mode: BlurToolMode, settings: BrushSettings) throws {
+    init(layer: ImageLayer, image: CGImage, transform: LayerTransform, canvas: CGSize, mode: BlurToolMode, settings: BrushSettings,
+         useGPU: Bool = true) throws {
         self.layer = layer
         self.mode = mode
         diameter = max(2, settings.diameter)
@@ -67,7 +79,8 @@ final class WarpStroke {
         guard let data = context.data else { throw ExportError.render }
         // Top-left rows: a document point's row is its y.
         pixels = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
-        self.image = context.makeImage()
+        gpu = useGPU ? MetalWarp(pixels: context) : nil
+        cpuImage = context.makeImage()
     }
 
     private var radius: Int { Int((diameter / 2).rounded(.up)) }
@@ -84,23 +97,36 @@ final class WarpStroke {
     func append(_ point: CGPoint) {
         guard let from = last else {
             last = point
-            if mode == .smudge { pickUp(at: point) }
+            if mode == .smudge {
+                if let gpu { gpu.pickUp(at: point, radius: radius); gpu.commit() } else { pickUp(at: point) }
+            }
             return
         }
         let distance = hypot(point.x - from.x, point.y - from.y)
-        let spacing = max(1, diameter * (mode == .smudge ? 0.08 : 0.025))
+        // Smudge drags the pixels one dab's spacing at a time and mixes them with what's there: spaced widely, each step
+        // left a faint copy of what it dragged, echoes along the stroke. A pixel apart (a little more for a huge brush)
+        // the steps run together into one smear, as Photoshop's does.
+        let spacing = max(1, diameter * (mode == .smudge ? 0.005 : 0.025))
         guard distance >= spacing else { return }
         let steps = Int((distance / spacing).rounded(.up))
         var previous = from
         for step in 1...steps {
             let t = CGFloat(step) / CGFloat(steps)
             let next = CGPoint(x: from.x + (point.x - from.x) * t, y: from.y + (point.y - from.y) * t)
-            if mode == .smudge { smudge(at: next) } else { push(from: previous, to: next) }
+            if let gpu {
+                if mode == .smudge { gpu.smudge(at: next, radius: radius, diameter: diameter, hardness: hardness, strength: strength) }
+                else { gpu.push(from: previous, to: next, radius: radius, diameter: diameter, hardness: hardness, strength: strength) }
+            } else if mode == .smudge { smudge(at: next) } else { push(from: previous, to: next) }
             points.append(next)
             previous = next
         }
         last = point
-        image = context.makeImage()
+        if let gpu {
+            gpu.commit()
+            cpuImage = nil
+        } else {
+            cpuImage = context.makeImage()
+        }
     }
 
     private func pickUp(at center: CGPoint) {
@@ -134,10 +160,13 @@ final class WarpStroke {
                 let p = (y * width + x) * 4, c = ((dy + r) * side + dx + r) * 4
                 for k in 0..<4 {
                     let under = Float(pixels[p + k])
-                    let painted = under + (carried[c + k] - under) * w
+                    // What was under the brush at the last dab, laid down here at the smudge's strength, as Photoshop
+                    // does: all of it drags the pixels along; less mixes them with what's here, softening the trail.
+                    let painted = under + (carried[c + k] - under) * w * keep
                     pixels[p + k] = UInt8(max(0, min(255, painted.rounded())))
-                    // The brush picks up some of what it just left, more the weaker the smudge.
-                    carried[c + k] = painted + (carried[c + k] - painted) * keep
+                    // The brush then carries what it just left, and nothing older: holding on to what it picked up
+                    // at the start stamped it again at every dab, a trail of ghost copies.
+                    carried[c + k] = painted
                 }
             }
         }
@@ -191,7 +220,7 @@ final class WarpStroke {
 extension EditorSession {
     func beginWarp(at point: CGPoint) {
         guard canPaint, !isMaskSelected, let layer = activeLayer, let image = layer.asset?.image, let document else {
-            if isMaskSelected { brushError = "涂抹与液化作用于图层像素，而非蒙版。" }
+            brushError = isMaskSelected ? "涂抹与液化作用于图层像素，而非蒙版。" : paintRefusal
             return
         }
         finishOpacityEdit()
@@ -220,10 +249,18 @@ extension EditorSession {
             settings.hardness = 1
             settings.opacity = 1
             let stroke = try makeRasterEdit(for: current, settings: settings)
-            stroke.clone = (result, .zero)
+            stroke.clone = (result, CGRect(x: 0, y: 0, width: result.width, height: result.height), false)
             stroke.replacesWithClone = true
             stroke.editName = warp.mode.displayName
-            for point in warp.points { try stroke.append(point) }
+            // The tip is solid and a little wider than the brush, so a point every twentieth of its width covers what
+            // every dab did: a big brush on a big canvas lays thousands of dabs, and replaying each one stalled the release.
+            let spacing = max(1, warp.diameter * 0.05)
+            var kept: CGPoint?
+            for (index, point) in warp.points.enumerated() {
+                if let kept, index < warp.points.count - 1, hypot(point.x - kept.x, point.y - kept.y) < spacing { continue }
+                try stroke.append(point)
+                kept = point
+            }
             try stroke.flush()
             if !stroke.patches.isEmpty { try commitPaintSnapshot(stroke) }
         } catch { brushError = error.localizedDescription }
